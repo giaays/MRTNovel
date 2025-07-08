@@ -26,6 +26,35 @@ export default function ViewPage() {
 
   const idx = parseInt(index as string, 10)
 
+  const parseDictionaryTxt = (text: string): Record<string, string> => {
+    const lines = text.split(/\r?\n/)
+    const dict: Record<string, string> = {}
+    for (const line of lines) {
+      const [key, value] = line.split('=')
+      if (key && value) {
+        dict[key.trim().toLowerCase()] = value.trim()
+      }
+    }
+    return dict
+  }
+
+  const applyDictionary = (text: string, dict: Record<string, string>): string => {
+    const keys = Object.keys(dict).sort((a, b) => b.length - a.length)
+    const pattern = new RegExp(`\\b(${keys.join("|")})\\b`, "gi")
+    return text.replace(pattern, (match) => dict[match.toLowerCase()] || match)
+  }
+
+  const handleTranslate = async () => {
+    let rawDict = localStorage.getItem('userDict_raw')
+    if (!rawDict) {
+      const res = await fetch('/dictionary.txt')
+      rawDict = await res.text()
+    }
+    const dict = parseDictionaryTxt(rawDict)
+    const translated = applyDictionary(chunk, dict)
+    setChunk(translated)
+  }
+
   return (
     <main className="p-4 max-w-2xl mx-auto whitespace-pre-wrap">
       <h1 className="text-xl font-semibold mb-4">Trang {index}</h1>
@@ -33,7 +62,7 @@ export default function ViewPage() {
         {chunk}
       </div>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between mb-4">
         <button
           onClick={() => router.push(`/view/${idx - 1}`)}
           disabled={idx <= 1}
@@ -50,6 +79,13 @@ export default function ViewPage() {
           Trang sau →
         </button>
       </div>
+
+      <button
+        onClick={handleTranslate}
+        className="px-4 py-2 bg-green-600 text-white rounded"
+      >
+        Dịch bằng từ điển
+      </button>
     </main>
   )
 }

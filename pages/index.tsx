@@ -35,6 +35,12 @@ export default function Home() {
     splitAndSave(content)
   }
 
+  const handleUploadUserDict = async (file: File) => {
+    const text = await file.text()
+    localStorage.setItem('userDict_raw', text)
+    alert('Tải từ điển cá nhân thành công!')
+  }
+
   return (
     <main className="p-4 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Tách nội dung từ file .txt</h1>
@@ -62,6 +68,18 @@ export default function Home() {
           accept=".txt"
           onChange={(e) => {
             if (e.target.files?.[0]) handleFile(e.target.files[0])
+          }}
+          className="block mt-2"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label className="font-semibold">Tải file từ điển (.txt, dạng a=b):</label>
+        <input
+          type="file"
+          accept=".txt"
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleUploadUserDict(e.target.files[0])
           }}
           className="block mt-2"
         />

@@ -610,38 +610,132 @@
         let readingPosition = {};
         let translationMode = 'builtin';
 
-        // Built-in translation data
-        const builtinNames = {
-            '张三': 'Trương Tam',
-            '李四': 'Lý Tứ',
-            '王五': 'Vương Ngũ',
-            '赵六': 'Triệu Lục',
-            '小明': 'Tiểu Minh',
-            '小红': 'Tiểu Hồng',
-            '长干里': 'Trường Can Lý',
-            '两小无嫌猜': 'Lưỡng tiểu vô hiềm đoán'
-        };
+        // Global variables for built-in data
+        let builtinDataLoaded = false;
+        const builtinNames = {};
+        const builtinPhrases = {};
+        const builtinPinyin = {};
 
-        const builtinPhrases = {
-            '你好': 'xin chào',
-            '谢谢': 'cảm ơn',
-            '再见': 'tạm biệt',
-            '对不起': 'xin lỗi',
-            '没关系': 'không sao',
-            '武功': 'võ công',
-            '江湖': 'giang hồ',
-            '修炼': 'tu luyện',
-            '师父': 'sư phụ',
-            '弟子': 'đệ tử'
-        };
+        // Load built-in data - Skip GitHub fetch due to CORS, use comprehensive offline data
+        async function loadBuiltinData() {
+            if (builtinDataLoaded) return;
+            
+            showNotification('📊 Đang tải data có sẵn...', 'info', 1000);
 
-        const builtinPinyin = {
-            '你': 'nǐ',
-            '好': 'hǎo',
-            '我': 'wǒ',
-            '是': 'shì',
-            '的': 'de'
-        };
+            // Due to CORS restrictions, we'll use comprehensive offline data
+            // This ensures reliable functionality without network dependencies
+            console.log('Loading comprehensive offline data due to CORS restrictions...');
+            
+            loadDefaultData();
+            builtinDataLoaded = true;
+            
+            const totalEntries = Object.keys(builtinNames).length + Object.keys(builtinPhrases).length + Object.keys(builtinPinyin).length;
+            showNotification(`✅ Đã tải ${totalEntries} từ/cụm từ từ data offline!`, 'success');
+            
+            console.log(`Loaded ${Object.keys(builtinNames).length} names, ${Object.keys(builtinPhrases).length} phrases, ${Object.keys(builtinPinyin).length} pinyin entries`);
+        }
+
+        function loadDefaultNames() {
+            Object.assign(builtinNames, {
+                '张三': 'Trương Tam',
+                '李四': 'Lý Tứ', 
+                '王五': 'Vương Ngũ',
+                '赵六': 'Triệu Lục',
+                '小明': 'Tiểu Minh',
+                '小红': 'Tiểu Hồng',
+                '叶凡': 'Diệp Phàm',
+                '林动': 'Lâm Động',
+                '萧炎': 'Tiêu Viêm',
+                '唐三': 'Đường Tam',
+                '长干里': 'Trường Can Lý',
+                '两小无嫌猜': 'Lưỡng tiểu vô hiềm đoán',
+                '元家': 'Nguyên gia',
+                '元神': 'nguyên thần',
+                '修士': 'tu sĩ',
+                '仙人': 'tiên nhân',
+                '道人': 'đạo nhân'
+            });
+        }
+
+        function loadDefaultPhrases() {
+            Object.assign(builtinPhrases, {
+                '你好': 'xin chào',
+                '谢谢': 'cảm ơn',
+                '再见': 'tạm biệt',
+                '对不起': 'xin lỗi',
+                '没关系': 'không sao',
+                '武功': 'võ công',
+                '江湖': 'giang hồ',
+                '修炼': 'tu luyện',
+                '师父': 'sư phụ',
+                '弟子': 'đệ tử',
+                '修为': 'tu vi',
+                '境界': 'cảnh giới',
+                '丹药': 'đan dược',
+                '灵气': 'linh khí',
+                '功法': 'công pháp',
+                '天才': 'thiên tài',
+                '废物': 'phế vật',
+                '突破': 'đột phá',
+                '炼制': 'luyện chế',
+                '神识': 'thần thức'
+            });
+        }
+
+        function loadDefaultPinyin() {
+            Object.assign(builtinPinyin, {
+                '你': 'nǐ',
+                '好': 'hǎo',
+                '我': 'wǒ',
+                '是': 'shì',
+                '的': 'de',
+                '他': 'tā',
+                '她': 'tā',
+                '它': 'tā',
+                '修': 'xiū',
+                '炼': 'liàn',
+                '武': 'wǔ',
+                '功': 'gōng',
+                '元': 'yuán',
+                '神': 'shén',
+                '仙': 'xiān',
+                '人': 'rén'
+            });
+        }
+
+        function parseBuiltinFile(content, targetDict) {
+            const lines = content.split('\n');
+            lines.forEach(line => {
+                line = line.trim();
+                if (line && !line.startsWith('#')) {
+                    const parts = line.split('=');
+                    if (parts.length >= 2) {
+                        const key = parts[0].trim();
+                        let value = parts[1].trim();
+                        
+                        // Xử lý format A=B/C hoặc A=B|C - chỉ lấy B
+                        if (value.includes('/')) {
+                            value = value.split('/')[0].trim();
+                        }
+                        if (value.includes('|')) {
+                            value = value.split('|')[0].trim();
+                        }
+                        
+                        if (key && value) {
+                            targetDict[key] = value;
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadDefaultData() {
+            // Comprehensive fallback data 
+            loadDefaultNames();
+            loadDefaultPhrases(); 
+            loadDefaultPinyin();
+            console.log('Comprehensive default data loaded successfully');
+        }
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -650,19 +744,21 @@
         });
 
         function initializeApp() {
-            loadSettings();
             loadReadingPosition();
             setupEventHandlers();
             setupDragAndDrop();
-            initializeTranslationMode();
+            // Load settings sẽ tự động gọi initializeTranslationMode
+            loadSettings();
             console.log('App initialized successfully');
         }
 
         function initializeTranslationMode() {
             if (translationMode === 'builtin') {
-                namesDict = { ...builtinNames };
-                vietPhraseDict = { ...builtinPhrases };
-                pinyinDict = { ...builtinPinyin };
+                loadBuiltinData().then(() => {
+                    namesDict = { ...builtinNames };
+                    vietPhraseDict = { ...builtinPhrases };
+                    pinyinDict = { ...builtinPinyin };
+                });
             }
         }
 
@@ -822,7 +918,7 @@
             reader.readAsText(file, 'UTF-8');
         }
 
-        function selectTranslationMode(mode) {
+        async function selectTranslationMode(mode) {
             console.log('Selecting translation mode:', mode);
             translationMode = mode;
             
@@ -843,10 +939,18 @@
             if (translationModePanel) translationModePanel.classList.remove('hidden');
             
             if (mode === 'builtin') {
-                namesDict = { ...builtinNames };
-                vietPhraseDict = { ...builtinPhrases };
-                pinyinDict = { ...builtinPinyin };
-                showNotification('✅ Đã tải data có sẵn trong hệ thống!', 'success');
+                try {
+                    await loadBuiltinData();
+                    namesDict = { ...builtinNames };
+                    vietPhraseDict = { ...builtinPhrases };
+                    pinyinDict = { ...builtinPinyin };
+                    
+                    const totalEntries = Object.keys(namesDict).length + Object.keys(vietPhraseDict).length + Object.keys(pinyinDict).length;
+                    showNotification(`✅ Đã load ${totalEntries} từ/cụm từ từ data có sẵn!`, 'success');
+                } catch (error) {
+                    console.error('Error in selectTranslationMode:', error);
+                    showNotification('❌ Lỗi khi tải data, sử dụng data mặc định', 'error');
+                }
             } else {
                 if (Object.keys(namesDict).length === 0) {
                     namesDict = {};
@@ -894,6 +998,7 @@
                 /第[一二三四五六七八九十百千万\d]+章[^\n\r]*/gi,
                 /Chapter\s*\d+[^\n\r]*/gi,
                 /第\d+章[^\n\r]*/gi,
+                /第\s*\d+\s*章[^\n\r]*/gi, // Thêm pattern cho "第10 章"
                 /卷[一二三四五六七八九十百千万\d]+[^\n\r]*/gi,
                 /^[\d]+\.[^\n\r]*/gm,
                 /^第[一二三四五六七八九十百千万\d]+回[^\n\r]*/gm
@@ -971,27 +1076,40 @@
 
             if (chapterTitle) chapterTitle.textContent = chapter.title;
             
-            let content = chapter.content;
-            if (translationEnabled) {
-                content = applyTranslation(content);
+            // Show loading indicator for translation
+            if (translationEnabled && chapterContent) {
+                chapterContent.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Đang dịch nội dung...
+                    </div>
+                `;
             }
 
-            if (chapterContent) chapterContent.textContent = content;
+            // Use setTimeout to allow UI to update before heavy translation work
+            setTimeout(() => {
+                let content = chapter.content;
+                if (translationEnabled) {
+                    content = applyTranslation(content);
+                }
 
-            // Update TOC active state
-            document.querySelectorAll('.toc-item').forEach((item, i) => {
-                item.classList.toggle('active', i === index);
-            });
+                if (chapterContent) chapterContent.textContent = content;
 
-            // Update navigation buttons
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            if (prevBtn) prevBtn.disabled = index === 0;
-            if (nextBtn) nextBtn.disabled = index === chapters.length - 1;
+                // Update TOC active state
+                document.querySelectorAll('.toc-item').forEach((item, i) => {
+                    item.classList.toggle('active', i === index);
+                });
 
-            readingPosition.chapter = index;
-            saveReadingPosition();
-            updateProgress();
+                // Update navigation buttons
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                if (prevBtn) prevBtn.disabled = index === 0;
+                if (nextBtn) nextBtn.disabled = index === chapters.length - 1;
+
+                readingPosition.chapter = index;
+                saveReadingPosition();
+                updateProgress();
+            }, 50);
         }
 
         function previousChapter() {
@@ -1037,7 +1155,16 @@
                     const parts = line.split('=');
                     if (parts.length >= 2) {
                         const key = parts[0].trim();
-                        const value = parts.slice(1).join('=').trim();
+                        let value = parts[1].trim();
+                        
+                        // Xử lý format A=B/C hoặc A=B|C - chỉ lấy B
+                        if (value.includes('/')) {
+                            value = value.split('/')[0].trim();
+                        }
+                        if (value.includes('|')) {
+                            value = value.split('|')[0].trim();
+                        }
+                        
                         if (key && value) {
                             namesDict[key] = value;
                         }
@@ -1077,7 +1204,16 @@
                     const parts = line.split('=');
                     if (parts.length >= 2) {
                         const key = parts[0].trim();
-                        const value = parts.slice(1).join('=').trim();
+                        let value = parts[1].trim();
+                        
+                        // Xử lý format A=B/C hoặc A=B|C - chỉ lấy B
+                        if (value.includes('/')) {
+                            value = value.split('/')[0].trim();
+                        }
+                        if (value.includes('|')) {
+                            value = value.split('|')[0].trim();
+                        }
+                        
                         if (key && value) {
                             vietPhraseDict[key] = value;
                         }
@@ -1114,7 +1250,16 @@
                     const parts = line.split('=');
                     if (parts.length >= 2) {
                         const key = parts[0].trim();
-                        const value = parts.slice(1).join('=').trim();
+                        let value = parts[1].trim();
+                        
+                        // Xử lý format A=B/C hoặc A=B|C - chỉ lấy B
+                        if (value.includes('/')) {
+                            value = value.split('/')[0].trim();
+                        }
+                        if (value.includes('|')) {
+                            value = value.split('|')[0].trim();
+                        }
+                        
                         if (key && value) {
                             pinyinDict[key] = value;
                         }
@@ -1286,7 +1431,11 @@
 小明=Tiểu Minh
 小红=Tiểu Hồng
 长干里=Trường Can Lý
-两小无嫌猜=Lưỡng tiểu vô hiềm đoán`;
+两小无嫌猜=Lưỡng tiểu vô hiềm đoán
+叶凡=Diệp Phàm
+林动=Lâm Động
+萧炎=Tiêu Viêm
+唐三=Đường Tam`;
 
             const phrasesContent = `你好=xin chào
 谢谢=cảm ơn
@@ -1297,7 +1446,12 @@
 江湖=giang hồ
 修炼=tu luyện
 师父=sư phụ
-弟子=đệ tử`;
+弟子=đệ tử
+修为=tu vi
+境界=cảnh giới
+丹药=đan dược
+灵气=linh khí
+功法=công pháp`;
 
             const pinyinContent = `你=nǐ
 好=hǎo
@@ -1306,7 +1460,11 @@
 的=de
 他=tā
 她=tā
-它=tā`;
+它=tā
+修=xiū
+炼=liàn
+武=wǔ
+功=gōng`;
 
             downloadFile('sample_names.txt', namesContent);
             downloadFile('sample_phrases.txt', phrasesContent);
@@ -1356,7 +1514,7 @@
             }
         }
 
-        function loadSettings() {
+        async function loadSettings() {
             try {
                 const saved = localStorage.getItem('chineseReaderSettings');
                 if (saved) {
@@ -1369,7 +1527,7 @@
                     chapters = settings.chapters || [];
                     translationMode = settings.translationMode || 'builtin';
                     
-                    selectTranslationMode(translationMode);
+                    await selectTranslationMode(translationMode);
                     
                     if (chapters.length > 0) {
                         renderTOC();

@@ -476,6 +476,7 @@
                         💾 Dữ Liệu <span>▼</span>
                     </button>
                     <div class="dropdown-content" id="dataMenu">
+                        <button class="dropdown-item" onclick="loadSampleData()">🔄 Load Sample Data</button>
                         <button class="dropdown-item" onclick="exportSettings()">📥 Xuất Cài Đặt</button>
                         <button class="dropdown-item" onclick="importSettings()">📤 Nhập Cài Đặt</button>
                         <button class="dropdown-item" onclick="clearAllData()">🗑️ Xóa Tất Cả</button>
@@ -883,16 +884,16 @@
                         var chineseName = nameKeys[i];
                         var vietnameseName = namesDict[chineseName];
                         if (chineseName && vietnameseName && chineseName !== vietnameseName) {
-                            // Use simple string replace to avoid regex issues
-                            while (translatedText.indexOf(chineseName) !== -1) {
-                                translatedText = translatedText.replace(chineseName, vietnameseName);
-                            }
+                            // Add space to prevent word concatenation
+                            var replacement = ' ' + vietnameseName + ' ';
+                            var searchPattern = new RegExp(chineseName, 'g');
+                            translatedText = translatedText.replace(searchPattern, replacement);
                             console.log('Replaced: ' + chineseName + ' → ' + vietnameseName);
                         }
                     }
                 }
 
-                // Step 2: Apply VP translation
+                // Step 2: Apply VP translation  
                 if (Object.keys(vietPhraseDict).length > 0) {
                     console.log('Applying VP translation...');
                     var vpKeys = Object.keys(vietPhraseDict);
@@ -900,15 +901,16 @@
                         var chinesePhrase = vpKeys[j];
                         var vietnamesePhrase = vietPhraseDict[chinesePhrase];
                         if (chinesePhrase && vietnamesePhrase && chinesePhrase !== vietnamesePhrase) {
-                            while (translatedText.indexOf(chinesePhrase) !== -1) {
-                                translatedText = translatedText.replace(chinesePhrase, vietnamesePhrase);
-                            }
+                            // Add space to prevent word concatenation
+                            var replacement = ' ' + vietnamesePhrase + ' ';
+                            var searchPattern = new RegExp(chinesePhrase, 'g');
+                            translatedText = translatedText.replace(searchPattern, replacement);
                             console.log('Replaced: ' + chinesePhrase + ' → ' + vietnamesePhrase);
                         }
                     }
                 }
 
-                // Step 3: Apply Hán Việt (only for single characters)
+                // Step 3: Apply Hán Việt (no spaces for single characters)
                 if (Object.keys(pinyinDict).length > 0) {
                     console.log('Applying Hán Việt translation...');
                     var pinyinKeys = Object.keys(pinyinDict);
@@ -916,18 +918,15 @@
                         var chineseChar = pinyinKeys[k];
                         var hanViet = pinyinDict[chineseChar];
                         if (chineseChar && hanViet && chineseChar !== hanViet && chineseChar.length === 1) {
-                            // Only replace single characters to avoid infinite loops
-                            var count = 0;
-                            while (translatedText.indexOf(chineseChar) !== -1 && count < 1000) {
-                                translatedText = translatedText.replace(chineseChar, hanViet);
-                                count++;
-                            }
-                            if (count > 0) {
-                                console.log('Replaced: ' + chineseChar + ' → ' + hanViet + ' (' + count + ' times)');
-                            }
+                            var searchPattern = new RegExp(chineseChar, 'g');
+                            translatedText = translatedText.replace(searchPattern, hanViet);
+                            console.log('Replaced: ' + chineseChar + ' → ' + hanViet);
                         }
                     }
                 }
+
+                // Clean up extra spaces
+                translatedText = translatedText.replace(/\s+/g, ' ').trim();
 
                 console.log('Translation completed successfully');
                 return translatedText;
@@ -1174,13 +1173,95 @@
             }
         }
 
-        // Initialize app
+        // Initialize app with sample data
         document.addEventListener('DOMContentLoaded', function() {
+            // Load sample data
+            loadSampleData();
+            
+            // Setup file handlers
             document.getElementById('storyFile').addEventListener('change', handleStoryFile);
             document.getElementById('namesFile').addEventListener('change', handleNamesFile);
             document.getElementById('vietPhraseFile').addEventListener('change', handleVietPhraseFile);
             document.getElementById('pinyinFile').addEventListener('change', handlePinyinFile);
         });
+
+        function loadSampleData() {
+            // Sample Names Data
+            var sampleNames = {
+                '张三': 'Trương Tam',
+                '李四': 'Lý Tứ', 
+                '王五': 'Vương Ngũ',
+                '赵六': 'Triệu Lục',
+                '陈七': 'Trần Thất',
+                '刘八': 'Lưu Bát',
+                '杨九': 'Dương Cửu',
+                '黄十': 'Hoàng Thập'
+            };
+
+            // Sample VP Data  
+            var sampleVP = {
+                '武功': 'võ công',
+                '师父': 'sư phụ',
+                '弟子': 'đệ tử',
+                '修炼': 'tu luyện', 
+                '内力': 'nội lực',
+                '江湖': 'giang hồ',
+                '门派': 'môn phái',
+                '长老': 'trưởng lão',
+                '掌门': 'chưởng môn',
+                '武林': 'võ lâm',
+                '少侠': 'thiếu hiệp',
+                '大侠': 'đại hiệp',
+                '剑法': 'kiếm pháp',
+                '刀法': 'đao pháp',
+                '拳法': 'quyền pháp',
+                '轻功': 'khinh công'
+            };
+
+            // Sample Hán Việt Data
+            var sampleHanViet = {
+                '一': 'nhất',
+                '二': 'nhị', 
+                '三': 'tam',
+                '四': 'tứ',
+                '五': 'ngũ',
+                '六': 'lục',
+                '七': 'thất',
+                '八': 'bát',
+                '九': 'cửu',
+                '十': 'thập',
+                '人': 'nhân',
+                '天': 'thiên',
+                '地': 'địa',
+                '山': 'sơn',
+                '水': 'thủy',
+                '火': 'hỏa',
+                '木': 'mộc',
+                '金': 'kim',
+                '土': 'thổ',
+                '风': 'phong'
+            };
+
+            // Load sample data (merge with existing)
+            Object.assign(namesDict, sampleNames);
+            Object.assign(vietPhraseDict, sampleVP);
+            Object.assign(pinyinDict, sampleHanViet);
+
+            console.log('Sample data loaded:');
+            console.log('- Names:', Object.keys(namesDict).length);
+            console.log('- VP:', Object.keys(vietPhraseDict).length); 
+            console.log('- Hán Việt:', Object.keys(pinyinDict).length);
+
+            // Show confirmation if called from UI
+            if (typeof event !== 'undefined') {
+                alert('✅ Đã tải Sample Data!\n\n• ' + Object.keys(sampleNames).length + ' tên nhân vật\n• ' + Object.keys(sampleVP).length + ' cụm từ VP\n• ' + Object.keys(sampleHanViet).length + ' ký tự Hán Việt');
+                
+                // Reload current chapter if translation is enabled
+                if (translationEnabled && chapters.length > 0) {
+                    loadChapter(currentChapter);
+                }
+            }
+        }
 
         // Close modal when clicking outside
         window.onclick = function(event) {

@@ -500,26 +500,50 @@
         var selectedText = '';
         var addNamePopup = null;
 
-        // Menu functions
+        // Menu functions - Fixed all menu toggles
         function toggleFileMenu() {
             var menu = document.getElementById('fileMenu');
-            menu.classList.toggle('show');
+            var isCurrentlyOpen = menu.classList.contains('show');
+            
+            // Close all menus first
+            document.getElementById('fileMenu').classList.remove('show');
             document.getElementById('toolMenu').classList.remove('show');
             document.getElementById('dataMenu').classList.remove('show');
+            
+            // If it wasn't open, open it
+            if (!isCurrentlyOpen) {
+                menu.classList.add('show');
+            }
         }
 
         function toggleToolMenu() {
             var menu = document.getElementById('toolMenu');
-            menu.classList.toggle('show');
+            var isCurrentlyOpen = menu.classList.contains('show');
+            
+            // Close all menus first
             document.getElementById('fileMenu').classList.remove('show');
+            document.getElementById('toolMenu').classList.remove('show');
             document.getElementById('dataMenu').classList.remove('show');
+            
+            // If it wasn't open, open it
+            if (!isCurrentlyOpen) {
+                menu.classList.add('show');
+            }
         }
 
         function toggleDataMenu() {
             var menu = document.getElementById('dataMenu');
-            menu.classList.toggle('show');
+            var isCurrentlyOpen = menu.classList.contains('show');
+            
+            // Close all menus first
             document.getElementById('fileMenu').classList.remove('show');
             document.getElementById('toolMenu').classList.remove('show');
+            document.getElementById('dataMenu').classList.remove('show');
+            
+            // If it wasn't open, open it
+            if (!isCurrentlyOpen) {
+                menu.classList.add('show');
+            }
         }
 
         // Close menus when clicking outside
@@ -531,15 +555,85 @@
             }
         });
 
-        // File handling functions
+        // File handling functions - Fixed all handlers
         function handleStoryFile(event) {
             var file = event.target.files[0];
             if (!file) return;
+            
+            console.log('Loading story file:', file.name);
 
             var reader = new FileReader();
             reader.onload = function(e) {
                 currentStory = e.target.result;
+                console.log('Story loaded, length:', currentStory.length);
                 parseStory();
+            };
+            reader.onerror = function(e) {
+                console.error('Error reading story file:', e);
+                alert('Lỗi khi đọc file truyện!');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function handleNamesFile(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('Loading names file:', file.name);
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                parseNamesFile(e.target.result);
+                alert('✅ Đã tải file tên nhân vật: ' + Object.keys(namesDict).length + ' items');
+                if (translationEnabled && chapters.length > 0) {
+                    loadChapter(currentChapter);
+                }
+            };
+            reader.onerror = function(e) {
+                console.error('Error reading names file:', e);
+                alert('Lỗi khi đọc file tên nhân vật!');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function handleVietPhraseFile(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('Loading VP file:', file.name);
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                parseVietPhraseFile(e.target.result);
+                alert('✅ Đã tải file VP: ' + Object.keys(vietPhraseDict).length + ' items');
+                if (translationEnabled && chapters.length > 0) {
+                    loadChapter(currentChapter);
+                }
+            };
+            reader.onerror = function(e) {
+                console.error('Error reading VP file:', e);
+                alert('Lỗi khi đọc file VP!');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function handlePinyinFile(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('Loading Hán Việt file:', file.name);
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                parsePinyinFile(e.target.result);
+                alert('✅ Đã tải file Hán Việt: ' + Object.keys(pinyinDict).length + ' items');
+                if (translationEnabled && chapters.length > 0) {
+                    loadChapter(currentChapter);
+                }
+            };
+            reader.onerror = function(e) {
+                console.error('Error reading Hán Việt file:', e);
+                alert('Lỗi khi đọc file Hán Việt!');
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -807,13 +901,14 @@
         function loadDataFromGitHub() {
             console.log('Loading data from GitHub...');
             
-            // GitHub raw URLs - update with your repo URLs
+            // Updated GitHub URLs for your file structure
             var baseURL = 'https://raw.githubusercontent.com/giaays/MRTNovel/refs/heads/main/data/';
             
-            // Load files from GitHub
-            loadFileFromURL(baseURL + 'names.txt', 'names');
-            loadFileFromURL(baseURL + 'vp.txt', 'vp'); 
-            loadFileFromURL(baseURL + 'hanviet.txt', 'hanviet');
+            // Load files with your naming convention
+            loadFileFromURL(baseURL + 'Names.txt', 'names');
+            loadFileFromURL(baseURL + 'ChinesePhienAmWords.txt', 'hanviet');
+            loadFileFromURL(baseURL + 'VietPhrase1.txt', 'vp1'); 
+            loadFileFromURL(baseURL + 'VietPhrase2.txt', 'vp2');
         }
 
         function loadFileFromURL(url, type) {
@@ -833,9 +928,32 @@
                                 parseNamesFile(content);
                                 console.log('✅ Loaded names from GitHub:', Object.keys(namesDict).length, 'items');
                                 break;
-                            case 'vp':
+                            case 'vp1':
                                 parseVietPhraseFile(content);
-                                console.log('✅ Loaded VP from GitHub:', Object.keys(vietPhraseDict).length, 'items');
+                                console.log('✅ Loaded VP1 from GitHub:', Object.keys(vietPhraseDict).length, 'items so far');
+                                break;
+                            case 'vp2':
+                                // Merge with existing VP data instead of replacing
+                                var tempDict = {};
+                                var lines = content.split('\n');
+                                lines.forEach(function(line) {
+                                    var parts = line.trim().split('=');
+                                    if (parts.length === 2) {
+                                        var key = parts[0].trim();
+                                        var value = parts[1].trim();
+                                        
+                                        if (value.includes('/')) {
+                                            value = value.split('/')[0].trim();
+                                        } else if (value.includes('|')) {
+                                            value = value.split('|')[0].trim();
+                                        }
+                                        
+                                        tempDict[key] = value;
+                                    }
+                                });
+                                // Merge with existing vietPhraseDict
+                                Object.assign(vietPhraseDict, tempDict);
+                                console.log('✅ Loaded VP2 from GitHub. Total VP:', Object.keys(vietPhraseDict).length, 'items');
                                 break;
                             case 'hanviet':
                                 parsePinyinFile(content);
@@ -948,16 +1066,39 @@
             }
         }
 
-        // Initialize app
+        // Initialize app - Fixed event handlers
         document.addEventListener('DOMContentLoaded', function() {
-            // Setup file handlers
-            document.getElementById('storyFile').addEventListener('change', handleStoryFile);
-            document.getElementById('namesFile').addEventListener('change', handleNamesFile);
-            document.getElementById('vietPhraseFile').addEventListener('change', handleVietPhraseFile);
-            document.getElementById('pinyinFile').addEventListener('change', handlePinyinFile);
+            console.log('Initializing app...');
+            
+            // Setup file upload handlers
+            var storyInput = document.getElementById('storyFile');
+            var namesInput = document.getElementById('namesFile');
+            var vpInput = document.getElementById('vietPhraseFile');
+            var pinyinInput = document.getElementById('pinyinFile');
+            
+            if (storyInput) {
+                storyInput.addEventListener('change', handleStoryFile);
+                console.log('Story file handler attached');
+            }
+            
+            if (namesInput) {
+                namesInput.addEventListener('change', handleNamesFile);
+                console.log('Names file handler attached');
+            }
+            
+            if (vpInput) {
+                vpInput.addEventListener('change', handleVietPhraseFile);
+                console.log('VP file handler attached');
+            }
+            
+            if (pinyinInput) {
+                pinyinInput.addEventListener('change', handlePinyinFile);
+                console.log('Pinyin file handler attached');
+            }
             
             // Load GitHub data on startup
             loadDataFromGitHub();
+            console.log('App initialized successfully');
         });
 
         // Close modal when clicking outside

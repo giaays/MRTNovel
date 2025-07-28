@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+.add-name-popup .cancel-btn {
+            background: #f44336;
+            color: white;
+        }<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -384,9 +387,42 @@
             color: white;
         }
 
-        .add-name-popup .cancel-btn {
-            background: #f44336;
-            color: white;
+        .translation-progress {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 3000;
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .translation-progress .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        .progress-step {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .progress-step.active {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .progress-step.completed {
+            color: #4caf50;
         }
     </style>
 </head>
@@ -648,7 +684,7 @@
             currentChapter = index;
             var chapter = chapters[index];
 
-            // Update title
+            // Update title immediately
             document.getElementById('chapterTitle').textContent = chapter.title;
             console.log('Title updated to:', chapter.title);
 
@@ -657,12 +693,27 @@
             console.log('Original content length:', content.length);
 
             // Apply translation if enabled
-            if (translationEnabled) {
+            if (translationEnabled && content.length > 5000) {
+                // For large content, use async translation
+                showTranslationProgress();
+                setTimeout(function() {
+                    applyTranslationAsync(content, function(translatedContent) {
+                        updateChapterDisplay(translatedContent, index);
+                        hideTranslationProgress();
+                    });
+                }, 100);
+            } else if (translationEnabled) {
+                // For small content, use sync translation
                 console.log('Applying translation...');
                 content = applyTranslation(content);
                 console.log('Translated content length:', content.length);
+                updateChapterDisplay(content, index);
+            } else {
+                updateChapterDisplay(content, index);
             }
+        }
 
+        function updateChapterDisplay(content, index) {
             // Update content
             var contentElement = document.getElementById('chapterContent');
             contentElement.textContent = content;
@@ -945,7 +996,176 @@
             }
         }
 
-        // Add Name Mode functions
+        function applyTranslationAsync(text, callback) {
+            var translatedText = text;
+            var currentStep = 0;
+            var totalSteps = 3;
+            
+            console.log('Starting async translation process...');
+            updateTranslationStep(1, 'Names', 'active');
+
+            // Step 1: Names translation
+            setTimeout(function() {
+                if (Object.keys(namesDict).length > 0) {
+                    console.log('Applying names translation...');
+                    var nameKeys = Object.keys(namesDict);
+                    var batchSize = 10; // Process 10 names at a time
+                    var currentBatch = 0;
+                    
+                    function processNameBatch() {
+                        var start = currentBatch * batchSize;
+                        var end = Math.min(start + batchSize, nameKeys.length);
+                        
+                        for (var i = start; i < end; i++) {
+                            var chineseName = nameKeys[i];
+                            var vietnameseName = namesDict[chineseName];
+                            try {
+                                translatedText = translatedText.split(chineseName).join(vietnameseName);
+                            } catch (error) {
+                                console.error('Error replacing name:', chineseName);
+                            }
+                        }
+                        
+                        currentBatch++;
+                        if (currentBatch * batchSize < nameKeys.length) {
+                            setTimeout(processNameBatch, 10); // Small delay to prevent blocking
+                        } else {
+                            // Move to step 2
+                            updateTranslationStep(1, 'Names', 'completed');
+                            updateTranslationStep(2, 'VP', 'active');
+                            setTimeout(processVP, 50);
+                        }
+                    }
+                    
+                    processNameBatch();
+                } else {
+                    updateTranslationStep(1, 'Names', 'completed');
+                    updateTranslationStep(2, 'VP', 'active');
+                    setTimeout(processVP, 50);
+                }
+            }, 50);
+
+            // Step 2: VP translation
+            function processVP() {
+                if (Object.keys(vietPhraseDict).length > 0) {
+                    console.log('Applying VP translation...');
+                    var vpKeys = Object.keys(vietPhraseDict);
+                    var batchSize = 10;
+                    var currentBatch = 0;
+                    
+                    function processVPBatch() {
+                        var start = currentBatch * batchSize;
+                        var end = Math.min(start + batchSize, vpKeys.length);
+                        
+                        for (var j = start; j < end; j++) {
+                            var chinesePhrase = vpKeys[j];
+                            var vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                            try {
+                                translatedText = translatedText.split(chinesePhrase).join(vietnamesePhrase);
+                            } catch (error) {
+                                console.error('Error replacing VP:', chinesePhrase);
+                            }
+                        }
+                        
+                        currentBatch++;
+                        if (currentBatch * batchSize < vpKeys.length) {
+                            setTimeout(processVPBatch, 10);
+                        } else {
+                            // Move to step 3
+                            updateTranslationStep(2, 'VP', 'completed');
+                            updateTranslationStep(3, 'Hán Việt', 'active');
+                            setTimeout(processHanViet, 50);
+                        }
+                    }
+                    
+                    processVPBatch();
+                } else {
+                    updateTranslationStep(2, 'VP', 'completed');
+                    updateTranslationStep(3, 'Hán Việt', 'active');
+                    setTimeout(processHanViet, 50);
+                }
+            }
+
+            // Step 3: Hán Việt translation
+            function processHanViet() {
+                if (Object.keys(pinyinDict).length > 0) {
+                    console.log('Applying Hán Việt...');
+                    var pinyinKeys = Object.keys(pinyinDict);
+                    var batchSize = 20;
+                    var currentBatch = 0;
+                    
+                    function processHanVietBatch() {
+                        var start = currentBatch * batchSize;
+                        var end = Math.min(start + batchSize, pinyinKeys.length);
+                        
+                        for (var k = start; k < end; k++) {
+                            var chineseChar = pinyinKeys[k];
+                            var hanViet = pinyinDict[chineseChar];
+                            if (translatedText.includes(chineseChar)) {
+                                try {
+                                    translatedText = translatedText.split(chineseChar).join(hanViet);
+                                } catch (error) {
+                                    console.error('Error replacing Hán Việt:', chineseChar);
+                                }
+                            }
+                        }
+                        
+                        currentBatch++;
+                        if (currentBatch * batchSize < pinyinKeys.length) {
+                            setTimeout(processHanVietBatch, 10);
+                        } else {
+                            // Complete
+                            updateTranslationStep(3, 'Hán Việt', 'completed');
+                            setTimeout(function() {
+                                console.log('✅ Async translation completed');
+                                callback(translatedText);
+                            }, 100);
+                        }
+                    }
+                    
+                    processHanVietBatch();
+                } else {
+                    updateTranslationStep(3, 'Hán Việt', 'completed');
+                    setTimeout(function() {
+                        console.log('✅ Async translation completed');
+                        callback(translatedText);
+                    }, 100);
+                }
+            }
+        }
+
+        function showTranslationProgress() {
+            var progressDiv = document.createElement('div');
+            progressDiv.id = 'translationProgress';
+            progressDiv.className = 'translation-progress';
+            progressDiv.innerHTML = 
+                '<div class="spinner"></div>' +
+                '<div><strong>Đang dịch thuật...</strong></div>' +
+                '<div class="progress-step" id="step1">1. Tên nhân vật</div>' +
+                '<div class="progress-step" id="step2">2. Cụm từ VP</div>' +
+                '<div class="progress-step" id="step3">3. Âm Hán Việt</div>';
+            
+            document.body.appendChild(progressDiv);
+        }
+
+        function updateTranslationStep(stepNumber, stepName, status) {
+            var stepElement = document.getElementById('step' + stepNumber);
+            if (stepElement) {
+                stepElement.className = 'progress-step ' + status;
+                if (status === 'active') {
+                    stepElement.textContent = stepNumber + '. ' + stepName + ' - Đang xử lý...';
+                } else if (status === 'completed') {
+                    stepElement.textContent = stepNumber + '. ' + stepName + ' - Hoàn thành ✓';
+                }
+            }
+        }
+
+        function hideTranslationProgress() {
+            var progressDiv = document.getElementById('translationProgress');
+            if (progressDiv) {
+                document.body.removeChild(progressDiv);
+            }
+        }
         function toggleAddNameMode() {
             addNameMode = !addNameMode;
             var reader = document.querySelector('.reader');

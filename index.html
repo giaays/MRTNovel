@@ -424,7 +424,6 @@
                         <button class="dropdown-item" onclick="openNameEditor()">✏️ Sửa Tên Nhân Vật</button>
                         <button class="dropdown-item" onclick="highlightNames()">🔍 Highlight Tên</button>
                         <button class="dropdown-item" onclick="showPinyin()">📢 Hiện Phiên Âm</button>
-                        <button class="dropdown-item" onclick="autoTranslate()">🚀 Dịch Lại</button>
                     </div>
                 </div>
 
@@ -438,15 +437,6 @@
                         <button class="dropdown-item" onclick="clearAllData()">🗑️ Xóa Tất Cả</button>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="translation-tools hidden" id="translationTools">
-            <h3>🛠️ Công cụ dịch thuật</h3>
-            <div class="tool-row">
-                <button class="btn" onclick="highlightNames()">🔍 Highlight tên</button>
-                <button class="btn" onclick="showPinyin()">📢 Hiện phiên âm</button>
-                <button class="btn" onclick="autoTranslate()">🚀 Dịch tự động</button>
             </div>
         </div>
 
@@ -580,7 +570,6 @@
                 document.getElementById('chapterTitle').textContent = 'Chọn chương để đọc';
                 document.getElementById('progressText').textContent = 'Chưa có truyện';
                 document.getElementById('progressBar').style.width = '0%';
-                document.getElementById('translationTools').classList.add('hidden');
                 
                 // Clear file inputs
                 document.getElementById('storyFile').value = '';
@@ -674,6 +663,8 @@
                     content: content,
                     index: i
                 });
+                
+                console.log(`Chapter ${i + 1}: "${uniqueMatches[i].title}", content length: ${content.length}`);
             }
 
             // If no chapters found, create one big chapter
@@ -696,30 +687,53 @@
         function renderTOC() {
             const tocList = document.getElementById('tocList');
             tocList.innerHTML = '';
+            console.log('Rendering TOC with', chapters.length, 'chapters');
 
             chapters.forEach((chapter, index) => {
                 const item = document.createElement('div');
                 item.className = 'toc-item';
                 item.textContent = `${index + 1}. ${chapter.title}`;
-                item.onclick = () => loadChapter(index);
+                item.onclick = () => {
+                    console.log('TOC item clicked:', index);
+                    loadChapter(index);
+                };
                 tocList.appendChild(item);
             });
+            
+            console.log('TOC rendered successfully');
         }
 
         function loadChapter(index) {
-            if (index < 0 || index >= chapters.length) return;
+            if (index < 0 || index >= chapters.length) {
+                console.log('Invalid chapter index:', index);
+                return;
+            }
 
+            console.log('Loading chapter:', index, 'of', chapters.length);
             currentChapter = index;
             const chapter = chapters[index];
 
+            // Update chapter title
             document.getElementById('chapterTitle').textContent = chapter.title;
-            let content = chapter.content;
+            console.log('Chapter title set to:', chapter.title);
 
+            // Get chapter content
+            let content = chapter.content;
+            console.log('Original content length:', content.length);
+
+            // Apply translation if enabled
             if (translationEnabled) {
+                console.log('Translation enabled, applying...');
                 content = applyTranslation(content);
+                console.log('Translated content length:', content.length);
+            } else {
+                console.log('Translation disabled');
             }
 
-            document.getElementById('chapterContent').textContent = content;
+            // Update content display
+            const contentElement = document.getElementById('chapterContent');
+            contentElement.textContent = content; // Use textContent to avoid HTML issues
+            console.log('Content updated in DOM');
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -727,13 +741,17 @@
             });
 
             // Update navigation buttons
-            document.getElementById('prevBtn').disabled = index === 0;
-            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === chapters.length - 1;
 
             // Save reading position
             readingPosition.chapter = index;
             saveReadingPosition();
             updateProgress();
+            
+            console.log('Chapter loaded successfully');
         }
 
         function previousChapter() {
@@ -858,25 +876,37 @@
 
         function toggleTranslation() {
             translationEnabled = !translationEnabled;
-            document.getElementById('translationTools').classList.toggle('hidden', !translationEnabled);
             
-            // Show status message
             if (translationEnabled) {
-                if (Object.keys(namesDict).length === 0 && Object.keys(vietPhraseDict).length === 0) {
-                    alert('Chưa có dữ liệu dịch thuật. Vui lòng tải file tên nhân vật hoặc VP trước!');
+                // Check if we have translation data
+                const hasNames = Object.keys(namesDict).length > 0;
+                const hasVP = Object.keys(vietPhraseDict).length > 0;
+                
+                if (!hasNames && !hasVP) {
+                    alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file:\n• Tên nhân vật (.txt)\n• VP - Cụm từ Việt (.txt)\n\nTrước khi bật chế độ dịch.');
                     translationEnabled = false;
-                    document.getElementById('translationTools').classList.add('hidden');
                     return;
                 }
-                alert('Đã BẬT chế độ dịch thuật!');
+                
+                // Show what data we have
+                let dataInfo = '✅ Đã BẬT chế độ dịch thuật!\n\nDữ liệu có sẵn:\n';
+                if (hasNames) dataInfo += `• ${Object.keys(namesDict).length} tên nhân vật\n`;
+                if (hasVP) dataInfo += `• ${Object.keys(vietPhraseDict).length} cụm từ VP\n`;
+                
+                alert(dataInfo);
+                
+                // Apply translation to current chapter
+                if (chapters.length > 0) {
+                    loadChapter(currentChapter);
+                }
             } else {
-                alert('Đã TẮT chế độ dịch thuật!');
+                alert('❌ Đã TẮT chế độ dịch thuật!');
+                // Reload chapter without translation
+                if (chapters.length > 0) {
+                    loadChapter(currentChapter);
+                }
             }
             
-            // Reload current chapter with/without translation
-            if (chapters.length > 0) {
-                loadChapter(currentChapter);
-            }
             saveSettings();
         }
 
@@ -975,24 +1005,6 @@
             });
 
             content.innerHTML = text; // Set as HTML
-        }
-
-        function autoTranslate() {
-            if (chapters.length === 0) {
-                alert('Chưa có truyện để dịch!');
-                return;
-            }
-            
-            if (Object.keys(namesDict).length === 0 && Object.keys(vietPhraseDict).length === 0) {
-                alert('Chưa có dữ liệu dịch thuật. Vui lòng tải file tên nhân vật hoặc VP trước!');
-                return;
-            }
-            
-            // Force enable translation and reload
-            translationEnabled = true;
-            document.getElementById('translationTools').classList.remove('hidden');
-            loadChapter(currentChapter);
-            alert('Đã áp dụng dịch thuật cho chương hiện tại!');
         }
 
         function openNameEditor() {

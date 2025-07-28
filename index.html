@@ -1324,14 +1324,15 @@
                 const escapedName = chineseName.replace(/[.*+?^${}()|[\]\\]/g, '\\            reader.rea');
                 const regex = new RegExp(escapedName, 'g');
                 // Thêm space trước và sau mỗi từ đã dịch
-               translatedText = translatedText.replace(regex, ` ${vietnamesePhrase} `);
+                translatedText = translatedText.replace(regex, ` ${vietnamesePhrase} `);
             });
 
             Object.keys(vietPhraseDict).forEach(chinesePhrase => {
                 const vietnamesePhrase = vietPhraseDict[chinesePhrase];
                 const escapedPhrase = chinesePhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\            reader.rea');
                 const regex = new RegExp(escapedPhrase, 'g');
-                translatedText = translatedText.replace(regex, vietnamesePhrase);
+                // Thêm space trước và sau mỗi từ đã dịch
+                translatedText = translatedText.replace(regex, ` ${vietnamesePhrase} `);
             });
 
             translatedText = formatTranslatedText(translatedText);

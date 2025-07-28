@@ -260,27 +260,6 @@
             white-space: pre-wrap;
         }
 
-        .translation-tools {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .translation-tools h3 {
-            margin-bottom: 15px;
-            color: #4a5568;
-        }
-
-        .tool-row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-
         .progress-bar {
             background: rgba(255, 255, 255, 0.3);
             border-radius: 10px;
@@ -304,27 +283,6 @@
 
         .hidden {
             display: none;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 50px;
-            color: #667eea;
-        }
-
-        .spinner {
-            border: 4px solid rgba(102, 126, 234, 0.1);
-            border-left: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         .modal {
@@ -490,47 +448,10 @@
         let translationEnabled = false;
         let readingPosition = {};
 
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSettings();
-            loadReadingPosition();
-            setupFileHandlers();
-        });
-
-        function setupFileHandlers() {
-            console.log('Setting up file handlers...');
-            
-            const storyFileInput = document.getElementById('storyFile');
-            const namesFileInput = document.getElementById('namesFile');
-            const vietPhraseFileInput = document.getElementById('vietPhraseFile');
-            const pinyinFileInput = document.getElementById('pinyinFile');
-
-            if (storyFileInput) {
-                storyFileInput.addEventListener('change', handleStoryFile);
-                console.log('Story file handler attached');
-            }
-
-            if (namesFileInput) {
-                namesFileInput.addEventListener('change', handleNamesFile);
-                console.log('Names file handler attached');
-            }
-
-            if (vietPhraseFileInput) {
-                vietPhraseFileInput.addEventListener('change', handleVietPhraseFile);
-                console.log('Viet phrase file handler attached');
-            }
-
-            if (pinyinFileInput) {
-                pinyinFileInput.addEventListener('change', handlePinyinFile);
-                console.log('Pinyin file handler attached');
-            }
-        }
-
+        // Menu functions
         function toggleFileMenu() {
             const menu = document.getElementById('fileMenu');
             menu.classList.toggle('show');
-            
-            // Close other menus
             document.getElementById('toolMenu').classList.remove('show');
             document.getElementById('dataMenu').classList.remove('show');
         }
@@ -538,8 +459,6 @@
         function toggleToolMenu() {
             const menu = document.getElementById('toolMenu');
             menu.classList.toggle('show');
-            
-            // Close other menus
             document.getElementById('fileMenu').classList.remove('show');
             document.getElementById('dataMenu').classList.remove('show');
         }
@@ -547,38 +466,8 @@
         function toggleDataMenu() {
             const menu = document.getElementById('dataMenu');
             menu.classList.toggle('show');
-            
-            // Close other menus
             document.getElementById('fileMenu').classList.remove('show');
             document.getElementById('toolMenu').classList.remove('show');
-        }
-
-        function clearAllData() {
-            if (confirm('Bạn có chắc chắn muốn xóa tất cả dữ liệu không?')) {
-                currentStory = '';
-                chapters = [];
-                currentChapter = 0;
-                namesDict = {};
-                vietPhraseDict = {};
-                pinyinDict = {};
-                translationEnabled = false;
-                readingPosition = {};
-                
-                // Reset UI
-                document.getElementById('tocList').innerHTML = 'Vui lòng chọn file truyện để bắt đầu';
-                document.getElementById('chapterContent').innerHTML = 'Đang chờ bạn tải file truyện...<br><br><strong>Hướng dẫn:</strong><br>1. Chọn file truyện (.txt) tiếng Trung<br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, phiên âm)<br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.';
-                document.getElementById('chapterTitle').textContent = 'Chọn chương để đọc';
-                document.getElementById('progressText').textContent = 'Chưa có truyện';
-                document.getElementById('progressBar').style.width = '0%';
-                
-                // Clear file inputs
-                document.getElementById('storyFile').value = '';
-                document.getElementById('namesFile').value = '';
-                document.getElementById('vietPhraseFile').value = '';
-                document.getElementById('pinyinFile').value = '';
-                
-                alert('Đã xóa tất cả dữ liệu!');
-            }
         }
 
         // Close menus when clicking outside
@@ -590,18 +479,17 @@
             }
         });
 
+        // File handling functions
         function handleStoryFile(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             console.log('File selected:', file.name);
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 console.log('File loaded, length:', e.target.result.length);
                 currentStory = e.target.result;
                 parseStory();
-                saveSettings();
             };
             reader.onerror = function(e) {
                 console.error('Error reading file:', e);
@@ -611,10 +499,7 @@
         }
 
         function parseStory() {
-            if (!currentStory) {
-                console.log('No story content to parse');
-                return;
-            }
+            if (!currentStory) return;
 
             console.log('Parsing story, length:', currentStory.length);
 
@@ -642,7 +527,7 @@
             // Sort by position in text
             matches.sort((a, b) => a.index - b.index);
 
-            // Remove duplicates and create chapters
+            // Remove duplicates
             let uniqueMatches = [];
             matches.forEach(match => {
                 if (!uniqueMatches.find(um => Math.abs(um.index - match.index) < 10)) {
@@ -663,8 +548,6 @@
                     content: content,
                     index: i
                 });
-                
-                console.log(`Chapter ${i + 1}: "${uniqueMatches[i].title}", content length: ${content.length}`);
             }
 
             // If no chapters found, create one big chapter
@@ -678,62 +561,44 @@
             }
 
             console.log('Final chapters count:', chapters.length);
-
             renderTOC();
-            loadChapter(readingPosition.chapter || 0);
+            loadChapter(0);
             updateProgress();
         }
 
         function renderTOC() {
             const tocList = document.getElementById('tocList');
             tocList.innerHTML = '';
-            console.log('Rendering TOC with', chapters.length, 'chapters');
 
             chapters.forEach((chapter, index) => {
                 const item = document.createElement('div');
                 item.className = 'toc-item';
                 item.textContent = `${index + 1}. ${chapter.title}`;
-                item.onclick = () => {
-                    console.log('TOC item clicked:', index);
-                    loadChapter(index);
-                };
+                item.onclick = () => loadChapter(index);
                 tocList.appendChild(item);
             });
-            
-            console.log('TOC rendered successfully');
         }
 
         function loadChapter(index) {
-            if (index < 0 || index >= chapters.length) {
-                console.log('Invalid chapter index:', index);
-                return;
-            }
+            if (index < 0 || index >= chapters.length) return;
 
-            console.log('Loading chapter:', index, 'of', chapters.length);
+            console.log('Loading chapter:', index);
             currentChapter = index;
             const chapter = chapters[index];
 
-            // Update chapter title
+            // Update title
             document.getElementById('chapterTitle').textContent = chapter.title;
-            console.log('Chapter title set to:', chapter.title);
 
-            // Get chapter content
+            // Get content
             let content = chapter.content;
-            console.log('Original content length:', content.length);
 
             // Apply translation if enabled
             if (translationEnabled) {
-                console.log('Translation enabled, applying...');
                 content = applyTranslation(content);
-                console.log('Translated content length:', content.length);
-            } else {
-                console.log('Translation disabled');
             }
 
-            // Update content display
-            const contentElement = document.getElementById('chapterContent');
-            contentElement.textContent = content; // Use textContent to avoid HTML issues
-            console.log('Content updated in DOM');
+            // Update content
+            document.getElementById('chapterContent').textContent = content;
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -741,17 +606,10 @@
             });
 
             // Update navigation buttons
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            prevBtn.disabled = index === 0;
-            nextBtn.disabled = index === chapters.length - 1;
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
 
-            // Save reading position
-            readingPosition.chapter = index;
-            saveReadingPosition();
             updateProgress();
-            
-            console.log('Chapter loaded successfully');
         }
 
         function previousChapter() {
@@ -766,25 +624,15 @@
             }
         }
 
+        // Translation functions
         function handleNamesFile(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            console.log('Names file selected:', file.name);
-
             const reader = new FileReader();
             reader.onload = function(e) {
-                console.log('Names file loaded, length:', e.target.result.length);
                 parseNamesFile(e.target.result);
-                saveSettings();
-                if (translationEnabled) {
-                    loadChapter(currentChapter);
-                }
                 alert('Đã tải file tên nhân vật thành công!');
-            };
-            reader.onerror = function(e) {
-                console.error('Error reading names file:', e);
-                alert('Lỗi khi đọc file tên nhân vật. Vui lòng thử lại!');
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -792,36 +640,23 @@
         function parseNamesFile(content) {
             namesDict = {};
             const lines = content.split('\n');
-            let count = 0;
             lines.forEach(line => {
                 const parts = line.trim().split('=');
                 if (parts.length === 2) {
                     namesDict[parts[0].trim()] = parts[1].trim();
-                    count++;
                 }
             });
-            console.log('Parsed names count:', count);
+            console.log('Parsed names count:', Object.keys(namesDict).length);
         }
 
         function handleVietPhraseFile(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            console.log('VP file selected:', file.name);
-
             const reader = new FileReader();
             reader.onload = function(e) {
-                console.log('VP file loaded, length:', e.target.result.length);
                 parseVietPhraseFile(e.target.result);
-                saveSettings();
-                if (translationEnabled) {
-                    loadChapter(currentChapter);
-                }
                 alert('Đã tải file VP thành công!');
-            };
-            reader.onerror = function(e) {
-                console.error('Error reading VP file:', e);
-                alert('Lỗi khi đọc file VP. Vui lòng thử lại!');
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -829,33 +664,23 @@
         function parseVietPhraseFile(content) {
             vietPhraseDict = {};
             const lines = content.split('\n');
-            let count = 0;
             lines.forEach(line => {
                 const parts = line.trim().split('=');
                 if (parts.length === 2) {
                     vietPhraseDict[parts[0].trim()] = parts[1].trim();
-                    count++;
                 }
             });
-            console.log('Parsed VP count:', count);
+            console.log('Parsed VP count:', Object.keys(vietPhraseDict).length);
         }
 
         function handlePinyinFile(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            console.log('Pinyin file selected:', file.name);
-
             const reader = new FileReader();
             reader.onload = function(e) {
-                console.log('Pinyin file loaded, length:', e.target.result.length);
                 parsePinyinFile(e.target.result);
-                saveSettings();
                 alert('Đã tải file phiên âm thành công!');
-            };
-            reader.onerror = function(e) {
-                console.error('Error reading pinyin file:', e);
-                alert('Lỗi khi đọc file phiên âm. Vui lòng thử lại!');
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -863,22 +688,19 @@
         function parsePinyinFile(content) {
             pinyinDict = {};
             const lines = content.split('\n');
-            let count = 0;
             lines.forEach(line => {
                 const parts = line.trim().split('=');
                 if (parts.length === 2) {
                     pinyinDict[parts[0].trim()] = parts[1].trim();
-                    count++;
                 }
             });
-            console.log('Parsed pinyin count:', count);
+            console.log('Parsed pinyin count:', Object.keys(pinyinDict).length);
         }
 
         function toggleTranslation() {
             translationEnabled = !translationEnabled;
             
             if (translationEnabled) {
-                // Check if we have translation data
                 const hasNames = Object.keys(namesDict).length > 0;
                 const hasVP = Object.keys(vietPhraseDict).length > 0;
                 
@@ -888,40 +710,24 @@
                     return;
                 }
                 
-                // Show what data we have
                 let dataInfo = '✅ Đã BẬT chế độ dịch thuật!\n\nDữ liệu có sẵn:\n';
                 if (hasNames) dataInfo += `• ${Object.keys(namesDict).length} tên nhân vật\n`;
                 if (hasVP) dataInfo += `• ${Object.keys(vietPhraseDict).length} cụm từ VP\n`;
                 
                 alert(dataInfo);
-                
-                // Apply translation to current chapter
-                if (chapters.length > 0) {
-                    loadChapter(currentChapter);
-                }
             } else {
                 alert('❌ Đã TẮT chế độ dịch thuật!');
-                // Reload chapter without translation
-                if (chapters.length > 0) {
-                    loadChapter(currentChapter);
-                }
             }
             
-            saveSettings();
+            if (chapters.length > 0) {
+                loadChapter(currentChapter);
+            }
         }
 
         function applyTranslation(text) {
             let translatedText = text;
 
-            // Apply names translation FIRST (higher priority)
-            if (Object.keys(namesDict).length > 0) {
-                Object.keys(namesDict).forEach(chineseName => {
-                    const vietnameseName = namesDict[chineseName];
-                    // Use word boundary to avoid partial matches
-                    const regex = new RegExp(chineseName.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
-            let translatedText = text;
-
-            // Apply names translation FIRST (higher priority)
+            // Apply names translation FIRST
             Object.keys(namesDict).forEach(chineseName => {
                 const vietnameseName = namesDict[chineseName];
                 const regex = new RegExp(chineseName, 'g');
@@ -936,58 +742,6 @@
             });
 
             return translatedText;
-        }'), 'g');
-                    translatedText = translatedText.replace(regex, vietnameseName);
-                });
-            }
-
-            // Apply phrase translation SECOND
-            if (Object.keys(vietPhraseDict).length > 0) {
-                Object.keys(vietPhraseDict).forEach(chinesePhrase => {
-                    const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                    // Use word boundary to avoid partial matches
-                    const regex = new RegExp(chinesePhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
-            let translatedText = text;
-
-            // Apply names translation FIRST (higher priority)
-            Object.keys(namesDict).forEach(chineseName => {
-                const vietnameseName = namesDict[chineseName];
-                const regex = new RegExp(chineseName, 'g');
-                translatedText = translatedText.replace(regex, vietnameseName);
-            });
-
-            // Apply phrase translation SECOND
-            Object.keys(vietPhraseDict).forEach(chinesePhrase => {
-                const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                const regex = new RegExp(chinesePhrase, 'g');
-                translatedText = translatedText.replace(regex, vietnamesePhrase);
-            });
-
-            return translatedText;
-        }'), 'g');
-                    translatedText = translatedText.replace(regex, vietnamesePhrase);
-                });
-            }
-
-            return translatedText;
-        }
-
-        function showPinyin() {
-            if (Object.keys(pinyinDict).length === 0) {
-                alert('Chưa có dữ liệu phiên âm. Vui lòng tải file phiên âm trước!');
-                return;
-            }
-            
-            const content = document.getElementById('chapterContent');
-            let text = content.textContent; // Get plain text, not HTML
-            
-            Object.keys(pinyinDict).forEach(char => {
-                const pinyin = pinyinDict[char];
-                const regex = new RegExp(`(${char})`, 'g');
-                text = text.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
-            });
-
-            content.innerHTML = text; // Set as HTML
         }
 
         function highlightNames() {
@@ -997,16 +751,35 @@
             }
             
             const content = document.getElementById('chapterContent');
-            let text = content.textContent; // Get plain text, not HTML
-
+            let text = content.textContent;
+            
             Object.keys(namesDict).forEach(name => {
                 const regex = new RegExp(`(${name})`, 'g');
                 text = text.replace(regex, '<span class="char-highlight">$1</span>');
             });
 
-            content.innerHTML = text; // Set as HTML
+            content.innerHTML = text;
         }
 
+        function showPinyin() {
+            if (Object.keys(pinyinDict).length === 0) {
+                alert('Chưa có dữ liệu phiên âm. Vui lòng tải file phiên âm trước!');
+                return;
+            }
+            
+            const content = document.getElementById('chapterContent');
+            let text = content.textContent;
+            
+            Object.keys(pinyinDict).forEach(char => {
+                const pinyin = pinyinDict[char];
+                const regex = new RegExp(`(${char})`, 'g');
+                text = text.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
+            });
+
+            content.innerHTML = text;
+        }
+
+        // Name editor functions
         function openNameEditor() {
             const textarea = document.getElementById('nameTextarea');
             let content = '';
@@ -1024,13 +797,13 @@
         function saveNames() {
             const content = document.getElementById('nameTextarea').value;
             parseNamesFile(content);
-            saveSettings();
             closeNameEditor();
-            if (translationEnabled) {
+            if (translationEnabled && chapters.length > 0) {
                 loadChapter(currentChapter);
             }
         }
 
+        // Utility functions
         function updateProgress() {
             if (chapters.length === 0) return;
 
@@ -1038,61 +811,6 @@
             document.getElementById('progressBar').style.width = `${progress}%`;
             document.getElementById('progressText').textContent = 
                 `Chương ${currentChapter + 1}/${chapters.length} (${Math.round(progress)}%)`;
-        }
-
-        function saveSettings() {
-            const settings = {
-                namesDict,
-                vietPhraseDict,
-                pinyinDict,
-                translationEnabled,
-                currentStory,
-                chapters
-            };
-            // Note: localStorage is not available in this environment
-            // In a real browser, you would uncomment the line below:
-            // localStorage.setItem('chineseReaderSettings', JSON.stringify(settings));
-        }
-
-        function loadSettings() {
-            // Note: localStorage is not available in this environment
-            // In a real browser, you would uncomment the code below:
-            /*
-            const saved = localStorage.getItem('chineseReaderSettings');
-            if (saved) {
-                const settings = JSON.parse(saved);
-                namesDict = settings.namesDict || {};
-                vietPhraseDict = settings.vietPhraseDict || {};
-                pinyinDict = settings.pinyinDict || {};
-                translationEnabled = settings.translationEnabled || false;
-                currentStory = settings.currentStory || '';
-                chapters = settings.chapters || [];
-                
-                if (chapters.length > 0) {
-                    renderTOC();
-                    loadChapter(0);
-                }
-            }
-            */
-        }
-
-        function saveReadingPosition() {
-            readingPosition.chapter = currentChapter;
-            readingPosition.timestamp = Date.now();
-            // Note: localStorage is not available in this environment
-            // In a real browser, you would uncomment the line below:
-            // localStorage.setItem('readingPosition', JSON.stringify(readingPosition));
-        }
-
-        function loadReadingPosition() {
-            // Note: localStorage is not available in this environment
-            // In a real browser, you would uncomment the code below:
-            /*
-            const saved = localStorage.getItem('readingPosition');
-            if (saved) {
-                readingPosition = JSON.parse(saved);
-            }
-            */
         }
 
         function exportSettings() {
@@ -1132,7 +850,7 @@
                         translationEnabled = settings.translationEnabled || false;
                         
                         alert('Đã nhập cài đặt thành công!');
-                        if (translationEnabled) {
+                        if (translationEnabled && chapters.length > 0) {
                             loadChapter(currentChapter);
                         }
                     } catch (error) {
@@ -1143,6 +861,43 @@
             };
             input.click();
         }
+
+        function clearAllData() {
+            if (confirm('Bạn có chắc chắn muốn xóa tất cả dữ liệu không?')) {
+                currentStory = '';
+                chapters = [];
+                currentChapter = 0;
+                namesDict = {};
+                vietPhraseDict = {};
+                pinyinDict = {};
+                translationEnabled = false;
+                readingPosition = {};
+                
+                // Reset UI
+                document.getElementById('tocList').innerHTML = 'Vui lòng chọn file truyện để bắt đầu';
+                document.getElementById('chapterContent').innerHTML = 'Đang chờ bạn tải file truyện...<br><br><strong>Hướng dẫn:</strong><br>1. Chọn file truyện (.txt) tiếng Trung<br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, phiên âm)<br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.';
+                document.getElementById('chapterTitle').textContent = 'Chọn chương để đọc';
+                document.getElementById('progressText').textContent = 'Chưa có truyện';
+                document.getElementById('progressBar').style.width = '0%';
+                
+                // Clear file inputs
+                document.getElementById('storyFile').value = '';
+                document.getElementById('namesFile').value = '';
+                document.getElementById('vietPhraseFile').value = '';
+                document.getElementById('pinyinFile').value = '';
+                
+                alert('Đã xóa tất cả dữ liệu!');
+            }
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup file handlers
+            document.getElementById('storyFile').addEventListener('change', handleStoryFile);
+            document.getElementById('namesFile').addEventListener('change', handleNamesFile);
+            document.getElementById('vietPhraseFile').addEventListener('change', handleVietPhraseFile);
+            document.getElementById('pinyinFile').addEventListener('change', handlePinyinFile);
+        });
 
         // Close modal when clicking outside
         window.onclick = function(event) {

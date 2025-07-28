@@ -859,11 +859,36 @@
         function toggleTranslation() {
             translationEnabled = !translationEnabled;
             document.getElementById('translationTools').classList.toggle('hidden', !translationEnabled);
-            loadChapter(currentChapter);
+            
+            // Show status message
+            if (translationEnabled) {
+                if (Object.keys(namesDict).length === 0 && Object.keys(vietPhraseDict).length === 0) {
+                    alert('Chưa có dữ liệu dịch thuật. Vui lòng tải file tên nhân vật hoặc VP trước!');
+                    translationEnabled = false;
+                    document.getElementById('translationTools').classList.add('hidden');
+                    return;
+                }
+                alert('Đã BẬT chế độ dịch thuật!');
+            } else {
+                alert('Đã TẮT chế độ dịch thuật!');
+            }
+            
+            // Reload current chapter with/without translation
+            if (chapters.length > 0) {
+                loadChapter(currentChapter);
+            }
             saveSettings();
         }
 
         function applyTranslation(text) {
+            let translatedText = text;
+
+            // Apply names translation FIRST (higher priority)
+            if (Object.keys(namesDict).length > 0) {
+                Object.keys(namesDict).forEach(chineseName => {
+                    const vietnameseName = namesDict[chineseName];
+                    // Use word boundary to avoid partial matches
+                    const regex = new RegExp(chineseName.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
             let translatedText = text;
 
             // Apply names translation FIRST (higher priority)
@@ -881,35 +906,93 @@
             });
 
             return translatedText;
-        }
+        }'), 'g');
+                    translatedText = translatedText.replace(regex, vietnameseName);
+                });
+            }
 
-        function highlightNames() {
-            const content = document.getElementById('chapterContent');
-            let html = content.innerHTML;
+            // Apply phrase translation SECOND
+            if (Object.keys(vietPhraseDict).length > 0) {
+                Object.keys(vietPhraseDict).forEach(chinesePhrase => {
+                    const vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                    // Use word boundary to avoid partial matches
+                    const regex = new RegExp(chinesePhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
+            let translatedText = text;
 
-            Object.keys(namesDict).forEach(name => {
-                const regex = new RegExp(`(${name})`, 'g');
-                html = html.replace(regex, '<span class="char-highlight">$1</span>');
+            // Apply names translation FIRST (higher priority)
+            Object.keys(namesDict).forEach(chineseName => {
+                const vietnameseName = namesDict[chineseName];
+                const regex = new RegExp(chineseName, 'g');
+                translatedText = translatedText.replace(regex, vietnameseName);
             });
 
-            content.innerHTML = html;
+            // Apply phrase translation SECOND
+            Object.keys(vietPhraseDict).forEach(chinesePhrase => {
+                const vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                const regex = new RegExp(chinesePhrase, 'g');
+                translatedText = translatedText.replace(regex, vietnamesePhrase);
+            });
+
+            return translatedText;
+        }'), 'g');
+                    translatedText = translatedText.replace(regex, vietnamesePhrase);
+                });
+            }
+
+            return translatedText;
         }
 
         function showPinyin() {
+            if (Object.keys(pinyinDict).length === 0) {
+                alert('Chưa có dữ liệu phiên âm. Vui lòng tải file phiên âm trước!');
+                return;
+            }
+            
             const content = document.getElementById('chapterContent');
-            let html = content.innerHTML;
-
+            let text = content.textContent; // Get plain text, not HTML
+            
             Object.keys(pinyinDict).forEach(char => {
                 const pinyin = pinyinDict[char];
                 const regex = new RegExp(`(${char})`, 'g');
-                html = html.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
+                text = text.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
             });
 
-            content.innerHTML = html;
+            content.innerHTML = text; // Set as HTML
+        }
+
+        function highlightNames() {
+            if (Object.keys(namesDict).length === 0) {
+                alert('Chưa có dữ liệu tên nhân vật. Vui lòng tải file tên nhân vật trước!');
+                return;
+            }
+            
+            const content = document.getElementById('chapterContent');
+            let text = content.textContent; // Get plain text, not HTML
+
+            Object.keys(namesDict).forEach(name => {
+                const regex = new RegExp(`(${name})`, 'g');
+                text = text.replace(regex, '<span class="char-highlight">$1</span>');
+            });
+
+            content.innerHTML = text; // Set as HTML
         }
 
         function autoTranslate() {
+            if (chapters.length === 0) {
+                alert('Chưa có truyện để dịch!');
+                return;
+            }
+            
+            if (Object.keys(namesDict).length === 0 && Object.keys(vietPhraseDict).length === 0) {
+                alert('Chưa có dữ liệu dịch thuật. Vui lòng tải file tên nhân vật hoặc VP trước!');
+                return;
+            }
+            
+            // Force enable translation and reload
+            translationEnabled = true;
+            document.getElementById('translationTools').classList.remove('hidden');
             loadChapter(currentChapter);
+            alert('Đã áp dụng dịch thuật cho chương hiện tại!');
         }
 
         function openNameEditor() {

@@ -569,12 +569,16 @@
         function renderTOC() {
             const tocList = document.getElementById('tocList');
             tocList.innerHTML = '';
+            console.log('Rendering TOC with', chapters.length, 'chapters');
 
             chapters.forEach((chapter, index) => {
                 const item = document.createElement('div');
                 item.className = 'toc-item';
                 item.textContent = `${index + 1}. ${chapter.title}`;
-                item.onclick = () => loadChapter(index);
+                item.onclick = () => {
+                    console.log('TOC clicked, loading chapter:', index);
+                    loadChapter(index);
+                };
                 tocList.appendChild(item);
             });
         }
@@ -582,23 +586,29 @@
         function loadChapter(index) {
             if (index < 0 || index >= chapters.length) return;
 
-            console.log('Loading chapter:', index);
+            console.log('Loading chapter:', index, 'Translation enabled:', translationEnabled);
             currentChapter = index;
             const chapter = chapters[index];
 
             // Update title
             document.getElementById('chapterTitle').textContent = chapter.title;
+            console.log('Title updated to:', chapter.title);
 
             // Get content
             let content = chapter.content;
+            console.log('Original content length:', content.length);
 
             // Apply translation if enabled
             if (translationEnabled) {
+                console.log('Applying translation...');
                 content = applyTranslation(content);
+                console.log('Translated content length:', content.length);
             }
 
-            // Update content
-            document.getElementById('chapterContent').textContent = content;
+            // Update content - ALWAYS update the content
+            const contentElement = document.getElementById('chapterContent');
+            contentElement.textContent = content;
+            console.log('Content element updated');
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -610,6 +620,7 @@
             document.getElementById('nextBtn').disabled = index === chapters.length - 1;
 
             updateProgress();
+            console.log('Chapter loading completed');
         }
 
         function previousChapter() {
@@ -699,10 +710,13 @@
 
         function toggleTranslation() {
             translationEnabled = !translationEnabled;
+            console.log('Translation toggled to:', translationEnabled);
             
             if (translationEnabled) {
                 const hasNames = Object.keys(namesDict).length > 0;
                 const hasVP = Object.keys(vietPhraseDict).length > 0;
+                
+                console.log('Has names:', hasNames, 'Has VP:', hasVP);
                 
                 if (!hasNames && !hasVP) {
                     alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file:\n• Tên nhân vật (.txt)\n• VP - Cụm từ Việt (.txt)\n\nTrước khi bật chế độ dịch.');
@@ -715,32 +729,57 @@
                 if (hasVP) dataInfo += `• ${Object.keys(vietPhraseDict).length} cụm từ VP\n`;
                 
                 alert(dataInfo);
+                
+                // Force reload current chapter with translation
+                if (chapters.length > 0) {
+                    console.log('Reloading chapter with translation...');
+                    loadChapter(currentChapter);
+                }
             } else {
                 alert('❌ Đã TẮT chế độ dịch thuật!');
-            }
-            
-            if (chapters.length > 0) {
-                loadChapter(currentChapter);
+                // Force reload current chapter without translation
+                if (chapters.length > 0) {
+                    console.log('Reloading chapter without translation...');
+                    loadChapter(currentChapter);
+                }
             }
         }
 
         function applyTranslation(text) {
             let translatedText = text;
+            console.log('Starting translation process...');
+            console.log('Names dict keys:', Object.keys(namesDict));
+            console.log('VP dict keys:', Object.keys(vietPhraseDict));
 
             // Apply names translation FIRST
-            Object.keys(namesDict).forEach(chineseName => {
-                const vietnameseName = namesDict[chineseName];
-                const regex = new RegExp(chineseName, 'g');
-                translatedText = translatedText.replace(regex, vietnameseName);
-            });
+            if (Object.keys(namesDict).length > 0) {
+                console.log('Applying names translation...');
+                Object.keys(namesDict).forEach(chineseName => {
+                    const vietnameseName = namesDict[chineseName];
+                    const regex = new RegExp(chineseName, 'g');
+                    const matches = translatedText.match(regex);
+                    if (matches) {
+                        console.log(`Replacing "${chineseName}" with "${vietnameseName}" - found ${matches.length} matches`);
+                        translatedText = translatedText.replace(regex, vietnameseName);
+                    }
+                });
+            }
 
             // Apply phrase translation SECOND
-            Object.keys(vietPhraseDict).forEach(chinesePhrase => {
-                const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                const regex = new RegExp(chinesePhrase, 'g');
-                translatedText = translatedText.replace(regex, vietnamesePhrase);
-            });
+            if (Object.keys(vietPhraseDict).length > 0) {
+                console.log('Applying VP translation...');
+                Object.keys(vietPhraseDict).forEach(chinesePhrase => {
+                    const vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                    const regex = new RegExp(chinesePhrase, 'g');
+                    const matches = translatedText.match(regex);
+                    if (matches) {
+                        console.log(`Replacing "${chinesePhrase}" with "${vietnamesePhrase}" - found ${matches.length} matches`);
+                        translatedText = translatedText.replace(regex, vietnamesePhrase);
+                    }
+                });
+            }
 
+            console.log('Translation completed');
             return translatedText;
         }
 

@@ -388,44 +388,6 @@
             background: #f44336;
             color: white;
         }
-
-        .translation-progress {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 3000;
-            text-align: center;
-            min-width: 300px;
-        }
-
-        .translation-progress .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        .progress-step {
-            margin: 5px 0;
-            color: #666;
-        }
-
-        .progress-step.active {
-            color: #667eea;
-            font-weight: bold;
-        }
-
-        .progress-step.completed {
-            color: #4caf50;
-        }
     </style>
 </head>
 <body>
@@ -476,7 +438,7 @@
                         💾 Dữ Liệu <span>▼</span>
                     </button>
                     <div class="dropdown-content" id="dataMenu">
-                        <button class="dropdown-item" onclick="loadSampleData()">🔄 Load Sample Data</button>
+                        <button class="dropdown-item" onclick="loadDataFromGitHub()">🔄 Load GitHub Data</button>
                         <button class="dropdown-item" onclick="exportSettings()">📥 Xuất Cài Đặt</button>
                         <button class="dropdown-item" onclick="importSettings()">📤 Nhập Cài Đặt</button>
                         <button class="dropdown-item" onclick="clearAllData()">🗑️ Xóa Tất Cả</button>
@@ -506,8 +468,9 @@
                     <br><br>
                     <strong>Hướng dẫn:</strong>
                     <br>1. Chọn file truyện (.txt) tiếng Trung
-                    <br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, âm Hán Việt)
-                    <br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.
+                    <br>2. Data sẽ tự động load từ GitHub repo
+                    <br>3. Chỉ cần upload file truyện và bật dịch!
+                    <br>4. Dùng Add Name Mode để thêm tên nhân vật mới
                 </div>
             </div>
         </div>
@@ -667,274 +630,25 @@
             currentChapter = index;
             var chapter = chapters[index];
 
-            // Update title immediately
             document.getElementById('chapterTitle').textContent = chapter.title;
-            
             var content = chapter.content;
-            console.log('Loading chapter:', index, 'Content length:', content.length);
 
-            // Show loading for large content
-            if (translationEnabled && content.length > 3000) {
-                document.getElementById('chapterContent').textContent = 'Đang dịch thuật, vui lòng chờ...';
-                
-                // Use setTimeout to prevent UI blocking
-                setTimeout(function() {
-                    try {
-                        var translatedContent = applyTranslation(content);
-                        updateChapterContent(translatedContent, index);
-                    } catch (error) {
-                        console.error('Error during translation:', error);
-                        alert('Lỗi khi dịch thuật. Hiển thị nội dung gốc.');
-                        updateChapterContent(content, index);
-                    }
-                }, 100);
-            } else {
-                // For small content or no translation
-                if (translationEnabled) {
-                    try {
-                        content = applyTranslation(content);
-                    } catch (error) {
-                        console.error('Error during translation:', error);
-                        alert('Lỗi khi dịch thuật. Hiển thị nội dung gốc.');
-                    }
-                }
-                updateChapterContent(content, index);
+            if (translationEnabled) {
+                content = applyTranslation(content);
             }
-        }
 
-        function updateChapterContent(content, index) {
             document.getElementById('chapterContent').textContent = content;
 
-            // Update TOC active state
             var tocItems = document.querySelectorAll('.toc-item');
             tocItems.forEach(function(item, i) {
                 if (i === index) {
                     item.classList.add('active');
                 } else {
-                    item.classList.remove('active');
-                }
-            });
-
-            // Update navigation buttons
-            document.getElementById('prevBtn').disabled = index === 0;
-            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
-
-            updateProgress();
-            console.log('Chapter loaded successfully');
-        }
-
-        function previousChapter() {
-            if (currentChapter > 0) {
-                loadChapter(currentChapter - 1);
-            }
-        }
-
-        function nextChapter() {
-            if (currentChapter < chapters.length - 1) {
-                loadChapter(currentChapter + 1);
-            }
-        }
-
-        // Translation functions
-        function handleNamesFile(event) {
-            var file = event.target.files[0];
-            if (!file) return;
-
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                parseNamesFile(e.target.result);
-                alert('Đã tải file tên nhân vật thành công!');
-            };
-            reader.readAsText(file, 'UTF-8');
-        }
-
-        function parseNamesFile(content) {
-            namesDict = {};
-            var lines = content.split('\n');
-            lines.forEach(function(line) {
-                var parts = line.trim().split('=');
-                if (parts.length === 2) {
-                    var key = parts[0].trim();
-                    var value = parts[1].trim();
-                    
-                    if (value.includes('/')) {
-                        value = value.split('/')[0].trim();
-                    } else if (value.includes('|')) {
-                        value = value.split('|')[0].trim();
-                    }
-                    
-                    namesDict[key] = value;
-                }
-            });
-        }
-
-        function handleVietPhraseFile(event) {
-            var file = event.target.files[0];
-            if (!file) return;
-
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                parseVietPhraseFile(e.target.result);
-                alert('Đã tải file VP thành công!');
-            };
-            reader.readAsText(file, 'UTF-8');
-        }
-
-        function parseVietPhraseFile(content) {
-            vietPhraseDict = {};
-            var lines = content.split('\n');
-            lines.forEach(function(line) {
-                var parts = line.trim().split('=');
-                if (parts.length === 2) {
-                    var key = parts[0].trim();
-                    var value = parts[1].trim();
-                    
-                    if (value.includes('/')) {
-                        value = value.split('/')[0].trim();
-                    } else if (value.includes('|')) {
-                        value = value.split('|')[0].trim();
-                    }
-                    
-                    vietPhraseDict[key] = value;
-                }
-            });
-        }
-
-        function handlePinyinFile(event) {
-            var file = event.target.files[0];
-            if (!file) return;
-
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                parsePinyinFile(e.target.result);
-                alert('Đã tải file âm Hán Việt thành công!');
-            };
-            reader.readAsText(file, 'UTF-8');
-        }
-
-        function parsePinyinFile(content) {
-            pinyinDict = {};
-            var lines = content.split('\n');
-            lines.forEach(function(line) {
-                var parts = line.trim().split('=');
-                if (parts.length === 2) {
-                    var key = parts[0].trim();
-                    var value = parts[1].trim();
-                    
-                    if (value.includes('/')) {
-                        value = value.split('/')[0].trim();
-                    } else if (value.includes('|')) {
-                        value = value.split('|')[0].trim();
-                    }
-                    
-                    pinyinDict[key] = value;
-                }
-            });
-        }
-
-        function toggleTranslation() {
-            translationEnabled = !translationEnabled;
-            console.log('Translation toggled to:', translationEnabled);
-            
-            if (translationEnabled) {
-                var hasNames = Object.keys(namesDict).length > 0;
-                var hasVP = Object.keys(vietPhraseDict).length > 0;
-                var hasPinyin = Object.keys(pinyinDict).length > 0;
-                
-                console.log('Available data - Names:', hasNames, 'VP:', hasVP, 'Hán Việt:', hasPinyin);
-                
-                if (!hasNames && !hasVP && !hasPinyin) {
-                    alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file:\n• Tên nhân vật (.txt)\n• VP - Cụm từ Việt (.txt)\n• Âm Hán Việt (.txt)');
-                    translationEnabled = false;
-                    return;
-                }
-                
-                var dataInfo = '✅ Đã BẬT chế độ dịch thuật!\n\nDữ liệu có sẵn:\n';
-                if (hasNames) dataInfo += '• ' + Object.keys(namesDict).length + ' tên nhân vật\n';
-                if (hasVP) dataInfo += '• ' + Object.keys(vietPhraseDict).length + ' cụm từ VP\n';
-                if (hasPinyin) dataInfo += '• ' + Object.keys(pinyinDict).length + ' ký tự Hán Việt\n';
-                
-                dataInfo += '\n⏳ Đang áp dụng dịch thuật...';
-                alert(dataInfo);
-                
-                // Apply translation with delay
-                if (chapters.length > 0) {
-                    loadChapter(currentChapter);
-                }
-            } else {
                 alert('❌ Đã TẮT chế độ dịch thuật!');
-                if (chapters.length > 0) {
-                    loadChapter(currentChapter);
-                }
             }
-        }
-
-        function applyTranslation(text) {
-            if (!text || text.length === 0) return text;
             
-            var translatedText = text;
-            console.log('Starting translation...');
-            
-            try {
-                // Step 1: Apply names translation
-                if (Object.keys(namesDict).length > 0) {
-                    console.log('Applying names translation...');
-                    var nameKeys = Object.keys(namesDict);
-                    for (var i = 0; i < nameKeys.length; i++) {
-                        var chineseName = nameKeys[i];
-                        var vietnameseName = namesDict[chineseName];
-                        if (chineseName && vietnameseName && chineseName !== vietnameseName) {
-                            // Add space to prevent word concatenation
-                            var replacement = ' ' + vietnameseName + ' ';
-                            var searchPattern = new RegExp(chineseName, 'g');
-                            translatedText = translatedText.replace(searchPattern, replacement);
-                            console.log('Replaced: ' + chineseName + ' → ' + vietnameseName);
-                        }
-                    }
-                }
-
-                // Step 2: Apply VP translation  
-                if (Object.keys(vietPhraseDict).length > 0) {
-                    console.log('Applying VP translation...');
-                    var vpKeys = Object.keys(vietPhraseDict);
-                    for (var j = 0; j < vpKeys.length; j++) {
-                        var chinesePhrase = vpKeys[j];
-                        var vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                        if (chinesePhrase && vietnamesePhrase && chinesePhrase !== vietnamesePhrase) {
-                            // Add space to prevent word concatenation
-                            var replacement = ' ' + vietnamesePhrase + ' ';
-                            var searchPattern = new RegExp(chinesePhrase, 'g');
-                            translatedText = translatedText.replace(searchPattern, replacement);
-                            console.log('Replaced: ' + chinesePhrase + ' → ' + vietnamesePhrase);
-                        }
-                    }
-                }
-
-                // Step 3: Apply Hán Việt (no spaces for single characters)
-                if (Object.keys(pinyinDict).length > 0) {
-                    console.log('Applying Hán Việt translation...');
-                    var pinyinKeys = Object.keys(pinyinDict);
-                    for (var k = 0; k < pinyinKeys.length; k++) {
-                        var chineseChar = pinyinKeys[k];
-                        var hanViet = pinyinDict[chineseChar];
-                        if (chineseChar && hanViet && chineseChar !== hanViet && chineseChar.length === 1) {
-                            var searchPattern = new RegExp(chineseChar, 'g');
-                            translatedText = translatedText.replace(searchPattern, hanViet);
-                            console.log('Replaced: ' + chineseChar + ' → ' + hanViet);
-                        }
-                    }
-                }
-
-                // Clean up extra spaces
-                translatedText = translatedText.replace(/\s+/g, ' ').trim();
-
-                console.log('Translation completed successfully');
-                return translatedText;
-                
-            } catch (error) {
-                console.error('Translation error:', error);
-                alert('Lỗi khi dịch thuật: ' + error.message);
-                return text; // Return original text if error
+            if (chapters.length > 0) {
+                loadChapter(currentChapter);
             }
         }
 
@@ -1036,8 +750,8 @@
             var nameKeys = Object.keys(namesDict);
             for (var i = 0; i < nameKeys.length; i++) {
                 var name = nameKeys[i];
-                var regex = new RegExp('(' + name + ')', 'g');
-                text = text.replace(regex, '<span class="char-highlight">$1</span>');
+                // Use safe replacement for highlighting
+                text = safeReplace(text, name, '<span class="char-highlight">' + name + '</span>');
             }
 
             content.innerHTML = text;
@@ -1056,8 +770,8 @@
             for (var i = 0; i < pinyinKeys.length; i++) {
                 var char = pinyinKeys[i];
                 var hanViet = pinyinDict[char];
-                var regex = new RegExp('(' + char + ')', 'g');
-                text = text.replace(regex, '<span title="' + hanViet + '" class="char-highlight">$1</span>');
+                // Use safe replacement for pinyin display
+                text = safeReplace(text, char, '<span title="' + hanViet + '" class="char-highlight">' + char + '</span>');
             }
 
             content.innerHTML = text;
@@ -1086,6 +800,67 @@
             closeNameEditor();
             if (translationEnabled && chapters.length > 0) {
                 loadChapter(currentChapter);
+            }
+        }
+
+        // GitHub data loading
+        function loadDataFromGitHub() {
+            console.log('Loading data from GitHub...');
+            
+            // GitHub raw URLs - update with your repo URLs
+            var baseURL = 'https://raw.githubusercontent.com/giaays/MRTNovel/refs/heads/main/data/';
+            
+            // Load files from GitHub
+            loadFileFromURL(baseURL + 'names.txt', 'names');
+            loadFileFromURL(baseURL + 'vp.txt', 'vp'); 
+            loadFileFromURL(baseURL + 'hanviet.txt', 'hanviet');
+        }
+
+        function loadFileFromURL(url, type) {
+            fetch(url)
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        console.log('Could not load ' + type + ' from ' + url);
+                        return null;
+                    }
+                })
+                .then(function(content) {
+                    if (content) {
+                        switch(type) {
+                            case 'names':
+                                parseNamesFile(content);
+                                console.log('✅ Loaded names from GitHub:', Object.keys(namesDict).length, 'items');
+                                break;
+                            case 'vp':
+                                parseVietPhraseFile(content);
+                                console.log('✅ Loaded VP from GitHub:', Object.keys(vietPhraseDict).length, 'items');
+                                break;
+                            case 'hanviet':
+                                parsePinyinFile(content);
+                                console.log('✅ Loaded Hán Việt from GitHub:', Object.keys(pinyinDict).length, 'items');
+                                break;
+                        }
+                        
+                        checkDataLoadComplete();
+                    }
+                })
+                .catch(function(error) {
+                    console.log('Error loading ' + type + ':', error);
+                });
+        }
+
+        function checkDataLoadComplete() {
+            var hasNames = Object.keys(namesDict).length > 0;
+            var hasVP = Object.keys(vietPhraseDict).length > 0;
+            var hasHanViet = Object.keys(pinyinDict).length > 0;
+            
+            if (hasNames || hasVP || hasHanViet) {
+                document.getElementById('progressText').textContent = 
+                    'GitHub data loaded! (' + Object.keys(namesDict).length + ' names, ' + 
+                    Object.keys(vietPhraseDict).length + ' VP, ' + 
+                    Object.keys(pinyinDict).length + ' Hán Việt)';
             }
         }
 
@@ -1159,7 +934,7 @@
                 translationEnabled = false;
                 
                 document.getElementById('tocList').innerHTML = 'Vui lòng chọn file truyện để bắt đầu';
-                document.getElementById('chapterContent').innerHTML = 'Đang chờ bạn tải file truyện...<br><br><strong>Hướng dẫn:</strong><br>1. Chọn file truyện (.txt) tiếng Trung<br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, âm Hán Việt)<br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.';
+                document.getElementById('chapterContent').innerHTML = 'Đang chờ bạn tải file truyện...<br><br><strong>Hướng dẫn:</strong><br>1. Chọn file truyện (.txt) tiếng Trung<br>2. Data sẽ tự động load từ GitHub repo<br>3. Chỉ cần upload file truyện và bật dịch!<br>4. Dùng Add Name Mode để thêm tên nhân vật mới';
                 document.getElementById('chapterTitle').textContent = 'Chọn chương để đọc';
                 document.getElementById('progressText').textContent = 'Chưa có truyện';
                 document.getElementById('progressBar').style.width = '0%';
@@ -1173,95 +948,17 @@
             }
         }
 
-        // Initialize app with sample data
+        // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            // Load sample data
-            loadSampleData();
-            
             // Setup file handlers
             document.getElementById('storyFile').addEventListener('change', handleStoryFile);
             document.getElementById('namesFile').addEventListener('change', handleNamesFile);
             document.getElementById('vietPhraseFile').addEventListener('change', handleVietPhraseFile);
             document.getElementById('pinyinFile').addEventListener('change', handlePinyinFile);
+            
+            // Load GitHub data on startup
+            loadDataFromGitHub();
         });
-
-        function loadSampleData() {
-            // Sample Names Data
-            var sampleNames = {
-                '张三': 'Trương Tam',
-                '李四': 'Lý Tứ', 
-                '王五': 'Vương Ngũ',
-                '赵六': 'Triệu Lục',
-                '陈七': 'Trần Thất',
-                '刘八': 'Lưu Bát',
-                '杨九': 'Dương Cửu',
-                '黄十': 'Hoàng Thập'
-            };
-
-            // Sample VP Data  
-            var sampleVP = {
-                '武功': 'võ công',
-                '师父': 'sư phụ',
-                '弟子': 'đệ tử',
-                '修炼': 'tu luyện', 
-                '内力': 'nội lực',
-                '江湖': 'giang hồ',
-                '门派': 'môn phái',
-                '长老': 'trưởng lão',
-                '掌门': 'chưởng môn',
-                '武林': 'võ lâm',
-                '少侠': 'thiếu hiệp',
-                '大侠': 'đại hiệp',
-                '剑法': 'kiếm pháp',
-                '刀法': 'đao pháp',
-                '拳法': 'quyền pháp',
-                '轻功': 'khinh công'
-            };
-
-            // Sample Hán Việt Data
-            var sampleHanViet = {
-                '一': 'nhất',
-                '二': 'nhị', 
-                '三': 'tam',
-                '四': 'tứ',
-                '五': 'ngũ',
-                '六': 'lục',
-                '七': 'thất',
-                '八': 'bát',
-                '九': 'cửu',
-                '十': 'thập',
-                '人': 'nhân',
-                '天': 'thiên',
-                '地': 'địa',
-                '山': 'sơn',
-                '水': 'thủy',
-                '火': 'hỏa',
-                '木': 'mộc',
-                '金': 'kim',
-                '土': 'thổ',
-                '风': 'phong'
-            };
-
-            // Load sample data (merge with existing)
-            Object.assign(namesDict, sampleNames);
-            Object.assign(vietPhraseDict, sampleVP);
-            Object.assign(pinyinDict, sampleHanViet);
-
-            console.log('Sample data loaded:');
-            console.log('- Names:', Object.keys(namesDict).length);
-            console.log('- VP:', Object.keys(vietPhraseDict).length); 
-            console.log('- Hán Việt:', Object.keys(pinyinDict).length);
-
-            // Show confirmation if called from UI
-            if (typeof event !== 'undefined') {
-                alert('✅ Đã tải Sample Data!\n\n• ' + Object.keys(sampleNames).length + ' tên nhân vật\n• ' + Object.keys(sampleVP).length + ' cụm từ VP\n• ' + Object.keys(sampleHanViet).length + ' ký tự Hán Việt');
-                
-                // Reload current chapter if translation is enabled
-                if (translationEnabled && chapters.length > 0) {
-                    loadChapter(currentChapter);
-                }
-            }
-        }
 
         // Close modal when clicking outside
         window.onclick = function(event) {
@@ -1272,4 +969,198 @@
         };
     </script>
 </body>
-</html>
+</html> {
+                    item.classList.remove('active');
+                }
+            });
+
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
+
+            updateProgress();
+        }
+
+        function previousChapter() {
+            if (currentChapter > 0) {
+                loadChapter(currentChapter - 1);
+            }
+        }
+
+        function nextChapter() {
+            if (currentChapter < chapters.length - 1) {
+                loadChapter(currentChapter + 1);
+            }
+        }
+
+        // Translation functions with safe regex handling
+        function escapeRegexChars(str) {
+            // Escape special regex characters including ***
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function safeReplace(text, searchStr, replaceStr) {
+            // Use simple string split/join instead of regex for safety
+            return text.split(searchStr).join(replaceStr);
+        }
+
+        function applyTranslation(text) {
+            if (!text) return text;
+            
+            var translatedText = text;
+            
+            try {
+                // Step 1: Apply names translation
+                var nameKeys = Object.keys(namesDict);
+                for (var i = 0; i < nameKeys.length; i++) {
+                    var chineseName = nameKeys[i];
+                    var vietnameseName = namesDict[chineseName];
+                    if (chineseName && vietnameseName) {
+                        translatedText = safeReplace(translatedText, chineseName, vietnameseName);
+                    }
+                }
+
+                // Step 2: Apply VP translation
+                var vpKeys = Object.keys(vietPhraseDict);
+                for (var j = 0; j < vpKeys.length; j++) {
+                    var chinesePhrase = vpKeys[j];
+                    var vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                    if (chinesePhrase && vietnamesePhrase) {
+                        translatedText = safeReplace(translatedText, chinesePhrase, vietnamesePhrase);
+                    }
+                }
+
+                // Step 3: Apply Hán Việt for single characters
+                var pinyinKeys = Object.keys(pinyinDict);
+                for (var k = 0; k < pinyinKeys.length; k++) {
+                    var chineseChar = pinyinKeys[k];
+                    var hanViet = pinyinDict[chineseChar];
+                    if (chineseChar && hanViet && chineseChar.length === 1) {
+                        translatedText = safeReplace(translatedText, chineseChar, hanViet);
+                    }
+                }
+
+                return translatedText;
+                
+            } catch (error) {
+                console.error('Translation error:', error);
+                return text; // Return original text if error
+            }
+        }
+
+        function handleNamesFile(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                parseNamesFile(e.target.result);
+                alert('Đã tải file tên nhân vật thành công!');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseNamesFile(content) {
+            namesDict = {};
+            var lines = content.split('\n');
+            lines.forEach(function(line) {
+                var parts = line.trim().split('=');
+                if (parts.length === 2) {
+                    var key = parts[0].trim();
+                    var value = parts[1].trim();
+                    
+                    if (value.includes('/')) {
+                        value = value.split('/')[0].trim();
+                    } else if (value.includes('|')) {
+                        value = value.split('|')[0].trim();
+                    }
+                    
+                    namesDict[key] = value;
+                }
+            });
+        }
+
+        function handleVietPhraseFile(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                parseVietPhraseFile(e.target.result);
+                alert('Đã tải file VP thành công!');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseVietPhraseFile(content) {
+            vietPhraseDict = {};
+            var lines = content.split('\n');
+            lines.forEach(function(line) {
+                var parts = line.trim().split('=');
+                if (parts.length === 2) {
+                    var key = parts[0].trim();
+                    var value = parts[1].trim();
+                    
+                    if (value.includes('/')) {
+                        value = value.split('/')[0].trim();
+                    } else if (value.includes('|')) {
+                        value = value.split('|')[0].trim();
+                    }
+                    
+                    vietPhraseDict[key] = value;
+                }
+            });
+        }
+
+        function handlePinyinFile(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                parsePinyinFile(e.target.result);
+                alert('Đã tải file âm Hán Việt thành công!');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parsePinyinFile(content) {
+            pinyinDict = {};
+            var lines = content.split('\n');
+            lines.forEach(function(line) {
+                var parts = line.trim().split('=');
+                if (parts.length === 2) {
+                    var key = parts[0].trim();
+                    var value = parts[1].trim();
+                    
+                    if (value.includes('/')) {
+                        value = value.split('/')[0].trim();
+                    } else if (value.includes('|')) {
+                        value = value.split('|')[0].trim();
+                    }
+                    
+                    pinyinDict[key] = value;
+                }
+            });
+        }
+
+        function toggleTranslation() {
+            translationEnabled = !translationEnabled;
+            
+            if (translationEnabled) {
+                var hasNames = Object.keys(namesDict).length > 0;
+                var hasVP = Object.keys(vietPhraseDict).length > 0;
+                var hasPinyin = Object.keys(pinyinDict).length > 0;
+                
+                if (!hasNames && !hasVP && !hasPinyin) {
+                    alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file hoặc dùng GitHub data.');
+                    translationEnabled = false;
+                    return;
+                }
+                
+                var dataInfo = '✅ Đã BẬT chế độ dịch thuật!\n\nDữ liệu có sẵn:\n';
+                if (hasNames) dataInfo += '• ' + Object.keys(namesDict).length + ' tên nhân vật\n';
+                if (hasVP) dataInfo += '• ' + Object.keys(vietPhraseDict).length + ' cụm từ VP\n';
+                if (hasPinyin) dataInfo += '• ' + Object.keys(pinyinDict).length + ' ký tự Hán Việt\n';
+                
+                alert(dataInfo);
+            } else

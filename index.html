@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đọc Truyện Tiếng Trung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .menu-group {
+            position: relative;
+            display: inline-block;
+        }
+
+        .menu-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .menu-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: white;
+            min-width: 200px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border-radius: 12px;
+            z-index: 100;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .dropdown-content.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 12px 16px;
+            color: #4a5568;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .main-upload-btn {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.3);
+            border: none;
+        }
+
+        .main-upload-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .toc {
+                order: 2;
+            }
+            
+            .reader {
+                order: 1;
+            }
+        }
+
+        .toc {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .toc h3 {
+            margin-bottom: 15px;
+            color: #4a5568;
+            text-align: center;
+        }
+
+        .toc-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .toc-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-left-color: #667eea;
+        }
+
+        .toc-item.active {
+            background: rgba(102, 126, 234, 0.3);
+            border-left-color: #667eea;
+            font-weight: bold;
+        }
+
+        .reader {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            min-height: 70vh;
+        }
+
+        .reader-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .chapter-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chapter-title {
+            font-size: 1.5rem;
+            color: #4a5568;
+            font-weight: bold;
+        }
+
+        .chapter-content {
+            line-height: 1.8;
+            font-size: 16px;
+            text-align: justify;
+            white-space: pre-wrap;
+        }
+
+        .translation-tools {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .translation-tools h3 {
+            margin-bottom: 15px;
+            color: #4a5568;
+        }
+
+        .tool-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            height: 8px;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid rgba(102, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .char-highlight {
+            background-color: rgba(255, 235, 59, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .char-highlight:hover {
+            background-color: rgba(255, 235, 59, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Ứng Dụng Đọc Truyện Tiếng Trung</h1>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                <div class="progress-text" id="progressText">Chưa có truyện</div>
+            </div>
+            <div class="controls">
+                <label for="storyFile" class="main-upload-btn">
+                    📚 Chọn File Truyện (.txt)
+                </label>
+                <input type="file" id="storyFile" class="file-input" accept=".txt">
+                
+                <div class="menu-group">
+                    <button class="menu-btn" onclick="toggleFileMenu()">
+                        📁 File Dịch Thuật <span>▼</span>
+                    </button>
+                    <div class="dropdown-content" id="fileMenu">
+                        <label for="namesFile" class="dropdown-item">👤 File Tên Nhân Vật</label>
+                        <input type="file" id="namesFile" class="file-input" accept=".txt">
+                        
+                        <label for="vietPhraseFile" class="dropdown-item">🇻🇳 File Cụm Từ Việt</label>
+                        <input type="file" id="vietPhraseFile" class="file-input" accept=".txt">
+                        
+                        <label for="pinyinFile" class="dropdown-item">🔤 File Phiên Âm</label>
+                        <input type="file" id="pinyinFile" class="file-input" accept=".txt">
+                        
+                        <button class="dropdown-item" onclick="createSampleFiles()">📝 Tạo File Mẫu</button>
+                    </div>
+                </div>
+
+                <div class="menu-group">
+                    <button class="menu-btn" onclick="toggleToolMenu()">
+                        🛠️ Công Cụ <span>▼</span>
+                    </button>
+                    <div class="dropdown-content" id="toolMenu">
+                        <button class="dropdown-item" onclick="toggleTranslation()">🔄 Bật/Tắt Dịch</button>
+                        <button class="dropdown-item" onclick="openNameEditor()">✏️ Sửa Tên Nhân Vật</button>
+                        <button class="dropdown-item" onclick="highlightNames()">🔍 Highlight Tên</button>
+                        <button class="dropdown-item" onclick="showPinyin()">📢 Hiện Phiên Âm</button>
+                        <button class="dropdown-item" onclick="autoTranslate()">🚀 Dịch Lại</button>
+                    </div>
+                </div>
+
+                <div class="menu-group">
+                    <button class="menu-btn" onclick="toggleDataMenu()">
+                        💾 Dữ Liệu <span>▼</span>
+                    </button>
+                    <div class="dropdown-content" id="dataMenu">
+                        <button class="dropdown-item" onclick="exportSettings()">📥 Xuất Cài Đặt</button>
+                        <button class="dropdown-item" onclick="importSettings()">📤 Nhập Cài Đặt</button>
+                        <button class="dropdown-item" onclick="clearAllData()">🗑️ Xóa Tất Cả</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="translation-tools hidden" id="translationTools">
+            <h3>🛠️ Công cụ dịch thuật</h3>
+            <div class="tool-row">
+                <button class="btn" onclick="highlightNames()">🔍 Highlight tên</button>
+                <button class="btn" onclick="showPinyin()">📢 Hiện phiên âm</button>
+                <button class="btn" onclick="autoTranslate()">🚀 Dịch tự động</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="toc" id="tocPanel">
+                <h3>📖 Mục lục</h3>
+                <div id="tocList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Vui lòng chọn file truyện để bắt đầu
+                    </div>
+                </div>
+            </div>
+
+            <div class="reader">
+                <div class="reader-header">
+                    <div class="chapter-nav">
+                        <button class="btn" onclick="previousChapter()" id="prevBtn">⬅️ Trước</button>
+                        <button class="btn" onclick="nextChapter()" id="nextBtn">Sau ➡️</button>
+                    </div>
+                    <div class="chapter-title" id="chapterTitle">Chọn chương để đọc</div>
+                </div>
+                <div class="chapter-content" id="chapterContent">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Đang chờ bạn tải file truyện...
+                        <br><br>
+                        <strong>Hướng dẫn:</strong>
+                        <br>1. Chọn file truyện (.txt) tiếng Trung
+                        <br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, cụm từ Việt, phiên âm)
+                        <br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for name editing -->
+    <div id="nameModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeNameEditor()">&times;</span>
+            <h2>✏️ Chỉnh sửa tên nhân vật</h2>
+            <p>Thêm hoặc sửa tên nhân vật (mỗi dòng một cặp: Tên_Trung=Tên_Việt)</p>
+            <textarea id="nameTextarea" placeholder="张三=Trương Tam&#10;李四=Lý Tứ&#10;王五=Vương Ngũ"></textarea>
+            <button class="btn" onclick="saveNames()">💾 Lưu tên</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentStory = '';
+        let chapters = [];
+        let currentChapter = 0;
+        let namesDict = {};
+        let vietPhraseDict = {};
+        let pinyinDict = {};
+        let translationEnabled = false;
+        let readingPosition = {};
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+            loadReadingPosition();
+            setupFileHandlers();
+        });
+
+        function setupFileHandlers() {
+            document.getElementById('storyFile').addEventListener('change', handleStoryFile);
+            document.getElementById('namesFile').addEventListener('change', handleNamesFile);
+            document.getElementById('vietPhraseFile').addEventListener('change', handleVietPhraseFile);
+            document.getElementById('pinyinFile').addEventListener('change', handlePinyinFile);
+        }
+
+        function handleStoryFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentStory = e.target.result;
+                parseStory();
+                saveSettings();
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseStory() {
+            if (!currentStory) return;
+
+            // Chapter detection patterns
+            const chapterPatterns = [
+                /第[一二三四五六七八九十百千万\d]+章[^\n\r]*/gi,
+                /Chapter\s*\d+[^\n\r]*/gi,
+                /第\d+章[^\n\r]*/gi,
+                /卷[一二三四五六七八九十百千万\d]+[^\n\r]*/gi,
+                /^[\d]+\.[^\n\r]*/gm,
+                /^第[一二三四五六七八九十百千万\d]+回[^\n\r]*/gm
+            ];
+
+            let matches = [];
+            chapterPatterns.forEach(pattern => {
+                const found = [...currentStory.matchAll(pattern)];
+                matches = matches.concat(found.map(match => ({
+                    title: match[0].trim(),
+                    index: match.index
+                })));
+            });
+
+            // Sort by position in text
+            matches.sort((a, b) => a.index - b.index);
+
+            // Remove duplicates and create chapters
+            let uniqueMatches = [];
+            matches.forEach(match => {
+                if (!uniqueMatches.find(um => Math.abs(um.index - match.index) < 10)) {
+                    uniqueMatches.push(match);
+                }
+            });
+
+            chapters = [];
+            for (let i = 0; i < uniqueMatches.length; i++) {
+                const start = uniqueMatches[i].index;
+                const end = i < uniqueMatches.length - 1 ? uniqueMatches[i + 1].index : currentStory.length;
+                const content = currentStory.substring(start, end).trim();
+                
+                chapters.push({
+                    title: uniqueMatches[i].title,
+                    content: content,
+                    index: i
+                });
+            }
+
+            // If no chapters found, create one big chapter
+            if (chapters.length === 0) {
+                chapters.push({
+                    title: 'Toàn bộ truyện',
+                    content: currentStory,
+                    index: 0
+                });
+            }
+
+            renderTOC();
+            loadChapter(readingPosition.chapter || 0);
+            updateProgress();
+        }
+
+        function renderTOC() {
+            const tocList = document.getElementById('tocList');
+            tocList.innerHTML = '';
+
+            chapters.forEach((chapter, index) => {
+                const item = document.createElement('div');
+                item.className = 'toc-item';
+                item.textContent = `${index + 1}. ${chapter.title}`;
+                item.onclick = () => loadChapter(index);
+                tocList.appendChild(item);
+            });
+        }
+
+        function loadChapter(index) {
+            if (index < 0 || index >= chapters.length) return;
+
+            currentChapter = index;
+            const chapter = chapters[index];
+
+            document.getElementById('chapterTitle').textContent = chapter.title;
+            let content = chapter.content;
+
+            if (translationEnabled) {
+                content = applyTranslation(content);
+            }
+
+            document.getElementById('chapterContent').textContent = content;
+
+            // Update TOC active state
+            document.querySelectorAll('.toc-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
+
+            // Save reading position
+            readingPosition.chapter = index;
+            saveReadingPosition();
+            updateProgress();
+        }
+
+        function previousChapter() {
+            if (currentChapter > 0) {
+                loadChapter(currentChapter - 1);
+            }
+        }
+
+        function nextChapter() {
+            if (currentChapter < chapters.length - 1) {
+                loadChapter(currentChapter + 1);
+            }
+        }
+
+        function handleNamesFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseNamesFile(e.target.result);
+                saveSettings();
+                if (translationEnabled) {
+                    loadChapter(currentChapter);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseNamesFile(content) {
+            namesDict = {};
+            const lines = content.split('\n');
+            lines.forEach(line => {
+                const parts = line.trim().split('=');
+                if (parts.length === 2) {
+                    namesDict[parts[0].trim()] = parts[1].trim();
+                }
+            });
+        }
+
+        function handleVietPhraseFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseVietPhraseFile(e.target.result);
+                saveSettings();
+                if (translationEnabled) {
+                    loadChapter(currentChapter);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseVietPhraseFile(content) {
+            vietPhraseDict = {};
+            const lines = content.split('\n');
+            lines.forEach(line => {
+                const parts = line.trim().split('=');
+                if (parts.length === 2) {
+                    vietPhraseDict[parts[0].trim()] = parts[1].trim();
+                }
+            });
+        }
+
+        function handlePinyinFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parsePinyinFile(e.target.result);
+                saveSettings();
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parsePinyinFile(content) {
+            pinyinDict = {};
+            const lines = content.split('\n');
+            lines.forEach(line => {
+                const parts = line.trim().split('=');
+                if (parts.length === 2) {
+                    pinyinDict[parts[0].trim()] = parts[1].trim();
+                }
+            });
+        }
+
+        function toggleTranslation() {
+            translationEnabled = !translationEnabled;
+            document.getElementById('translationTools').classList.toggle('hidden', !translationEnabled);
+            loadChapter(currentChapter);
+            saveSettings();
+        }
+
+        function applyTranslation(text) {
+            let translatedText = text;
+
+            // Apply names translation
+            Object.keys(namesDict).forEach(chineseName => {
+                const vietnameseName = namesDict[chineseName];
+                const regex = new RegExp(chineseName, 'g');
+                translatedText = translatedText.replace(regex, vietnameseName);
+            });
+
+            // Apply phrase translation
+            Object.keys(vietPhraseDict).forEach(chinesePhrase => {
+                const vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                const regex = new RegExp(chinesePhrase, 'g');
+                translatedText = translatedText.replace(regex, vietnamesePhrase);
+            });
+
+            return translatedText;
+        }
+
+        function highlightNames() {
+            const content = document.getElementById('chapterContent');
+            let html = content.innerHTML;
+
+            Object.keys(namesDict).forEach(name => {
+                const regex = new RegExp(`(${name})`, 'g');
+                html = html.replace(regex, '<span class="char-highlight">$1</span>');
+            });
+
+            content.innerHTML = html;
+        }
+
+        function showPinyin() {
+            const content = document.getElementById('chapterContent');
+            let html = content.innerHTML;
+
+            Object.keys(pinyinDict).forEach(char => {
+                const pinyin = pinyinDict[char];
+                const regex = new RegExp(`(${char})`, 'g');
+                html = html.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
+            });
+
+            content.innerHTML = html;
+        }
+
+        function autoTranslate() {
+            loadChapter(currentChapter);
+        }
+
+        function openNameEditor() {
+            const textarea = document.getElementById('nameTextarea');
+            let content = '';
+            Object.keys(namesDict).forEach(key => {
+                content += `${key}=${namesDict[key]}\n`;
+            });
+            textarea.value = content;
+            document.getElementById('nameModal').style.display = 'block';
+        }
+
+        function closeNameEditor() {
+            document.getElementById('nameModal').style.display = 'none';
+        }
+
+        function saveNames() {
+            const content = document.getElementById('nameTextarea').value;
+            parseNamesFile(content);
+            saveSettings();
+            closeNameEditor();
+            if (translationEnabled) {
+                loadChapter(currentChapter);
+            }
+        }
+
+        function updateProgress() {
+            if (chapters.length === 0) return;
+
+            const progress = ((currentChapter + 1) / chapters.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = 
+                `Chương ${currentChapter + 1}/${chapters.length} (${Math.round(progress)}%)`;
+        }
+
+        function saveSettings() {
+            const settings = {
+                namesDict,
+                vietPhraseDict,
+                pinyinDict,
+                translationEnabled,
+                currentStory,
+                chapters
+            };
+            // In a real environment, you would use localStorage here
+            // localStorage.setItem('chineseReaderSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            // In a real environment, you would use localStorage here
+            // const saved = localStorage.getItem('chineseReaderSettings');
+            // if (saved) {
+            //     const settings = JSON.parse(saved);
+            //     namesDict = settings.namesDict || {};
+            //     vietPhraseDict = settings.vietPhraseDict || {};
+            //     pinyinDict = settings.pinyinDict || {};
+            //     translationEnabled = settings.translationEnabled || false;
+            //     currentStory = settings.currentStory || '';
+            //     chapters = settings.chapters || [];
+            //     
+            //     if (chapters.length > 0) {
+            //         renderTOC();
+            //         loadChapter(0);
+            //     }
+            // }
+        }
+
+        function saveReadingPosition() {
+            readingPosition.chapter = currentChapter;
+            readingPosition.timestamp = Date.now();
+            // In a real environment, you would use localStorage here
+            // localStorage.setItem('readingPosition', JSON.stringify(readingPosition));
+        }
+
+        function loadReadingPosition() {
+            // In a real environment, you would use localStorage here
+            // const saved = localStorage.getItem('readingPosition');
+            // if (saved) {
+            //     readingPosition = JSON.parse(saved);
+            // }
+        }
+
+        function exportSettings() {
+            const settings = {
+                namesDict,
+                vietPhraseDict,
+                pinyinDict,
+                translationEnabled
+            };
+            
+            const blob = new Blob([JSON.stringify(settings, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chinese-reader-settings.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const settings = JSON.parse(e.target.result);
+                        namesDict = settings.namesDict || {};
+                        vietPhraseDict = settings.vietPhraseDict || {};
+                        pinyinDict = settings.pinyinDict || {};
+                        translationEnabled = settings.translationEnabled || false;
+                        
+                        alert('Đã nhập cài đặt thành công!');
+                        if (translationEnabled) {
+                            loadChapter(currentChapter);
+                        }
+                    } catch (error) {
+                        alert('Lỗi: File cài đặt không hợp lệ!');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('nameModal');
+            if (event.target === modal) {
+                closeNameEditor();
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,4 +1,74 @@
-<!DOCTYPE html>
+function parseStory() {
+            if (!currentStory) {
+                console.log('No story content to parse');
+                return;
+            }
+
+            console.log('Parsing story, length:', currentStory.length);
+
+            // Chapter detection patterns
+            const chapterPatterns = [
+                /第[一二三四五六七八九十百千万\d]+章[^\n\r]*/gi,
+                /Chapter\s*\d+[^\n\r]*/gi,
+                /第\d+章[^\n\r]*/gi,
+                /卷[一二三四五六七八九十百千万\d]+[^\n\r]*/gi,
+                /^[\d]+\.[^\n\r]*/gm,
+                /^第[一二三四五六七八九十百千万\d]+回[^\n\r]*/gm
+            ];
+
+            let matches = [];
+            chapterPatterns.forEach(pattern => {
+                const found = [...currentStory.matchAll(pattern)];
+                matches = matches.concat(found.map(match => ({
+                    title: match[0].trim(),
+                    index: match.index
+                })));
+            });
+
+            console.log('Found matches:', matches.length);
+
+            // Sort by position in text
+            matches.sort((a, b) => a.index - b.index);
+
+            // Remove duplicates and create chapters
+            let uniqueMatches = [];
+            matches.forEach(match => {
+                if (!uniqueMatches.find(um => Math.abs(um.index - match.index) < 10)) {
+                    uniqueMatches.push(match);
+                }
+            });
+
+            console.log('Unique matches:', uniqueMatches.length);
+
+            chapters = [];
+            for (let i = 0; i < uniqueMatches.length; i++) {
+                const start = uniqueMatches[i].index;
+                const end = i < uniqueMatches.length - 1 ? uniqueMatches[i + 1].index : currentStory.length;
+                const content = currentStory.substring(start, end).trim();
+                
+                chapters.push({
+                    title: uniqueMatches[i].title,
+                    content: content,
+                    index: i
+                });
+            }
+
+            // If no chapters found, create one big chapter
+            if (chapters.length === 0) {
+                console.log('No chapters found, creating single chapter');
+                chapters.push({
+                    title: 'Toàn bộ truyện',
+                    content: currentStory,
+                    index: 0
+                });
+            }
+
+            console.log('Final chapters count:', chapters.length);
+
+            renderTOC();
+            loadChapter(readingPosition.chapter || 0);
+            updateProgress();
+        }<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -31,6 +101,8 @@
             padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1000;
         }
 
         .header h1 {
@@ -51,6 +123,7 @@
         .menu-group {
             position: relative;
             display: inline-block;
+            z-index: 1001;
         }
 
         .menu-btn {
@@ -80,7 +153,7 @@
             min-width: 200px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             border-radius: 12px;
-            z-index: 1000;
+            z-index: 1002;
             top: 100%;
             left: 50%;
             transform: translateX(-50%);
@@ -501,14 +574,44 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadSettings();
             loadReadingPosition();
-            setupFileHandlers();
+            // Move setupFileHandlers to after all functions are defined
         });
 
         function setupFileHandlers() {
-            document.getElementById('storyFile').addEventListener('change', handleStoryFile);
-            document.getElementById('namesFile').addEventListener('change', handleNamesFile);
-            document.getElementById('vietPhraseFile').addEventListener('change', handleVietPhraseFile);
-            document.getElementById('pinyinFile').addEventListener('change', handlePinyinFile);
+            console.log('Setting up file handlers...');
+            
+            const storyFileInput = document.getElementById('storyFile');
+            const namesFileInput = document.getElementById('namesFile');
+            const vietPhraseFileInput = document.getElementById('vietPhraseFile');
+            const pinyinFileInput = document.getElementById('pinyinFile');
+
+            if (storyFileInput) {
+                storyFileInput.addEventListener('change', handleStoryFile);
+                console.log('Story file handler attached');
+            } else {
+                console.error('Story file input not found');
+            }
+
+            if (namesFileInput) {
+                namesFileInput.addEventListener('change', handleNamesFile);
+                console.log('Names file handler attached');
+            } else {
+                console.error('Names file input not found');
+            }
+
+            if (vietPhraseFileInput) {
+                vietPhraseFileInput.addEventListener('change', handleVietPhraseFile);
+                console.log('Viet phrase file handler attached');
+            } else {
+                console.error('Viet phrase file input not found');
+            }
+
+            if (pinyinFileInput) {
+                pinyinFileInput.addEventListener('change', handlePinyinFile);
+                console.log('Pinyin file handler attached');
+            } else {
+                console.error('Pinyin file input not found');
+            }
         }
 
         // MISSING FUNCTIONS - These were causing the errors
@@ -629,11 +732,18 @@
             const file = event.target.files[0];
             if (!file) return;
 
+            console.log('File selected:', file.name); // Debug log
+
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('File loaded, length:', e.target.result.length); // Debug log
                 currentStory = e.target.result;
                 parseStory();
                 saveSettings();
+            };
+            reader.onerror = function(e) {
+                console.error('Error reading file:', e); // Debug log
+                alert('Lỗi khi đọc file. Vui lòng thử lại!');
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -849,6 +959,11 @@
                 closeNameEditor();
             }
         };
+
+        // Setup file handlers after all functions are defined
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileHandlers();
+        });
     </script>
 </body>
 </html>
@@ -972,13 +1087,21 @@
             const file = event.target.files[0];
             if (!file) return;
 
+            console.log('Names file selected:', file.name);
+
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('Names file loaded, length:', e.target.result.length);
                 parseNamesFile(e.target.result);
                 saveSettings();
                 if (translationEnabled) {
                     loadChapter(currentChapter);
                 }
+                alert('Đã tải file tên nhân vật thành công!');
+            };
+            reader.onerror = function(e) {
+                console.error('Error reading names file:', e);
+                alert('Lỗi khi đọc file tên nhân vật. Vui lòng thử lại!');
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -998,13 +1121,21 @@
             const file = event.target.files[0];
             if (!file) return;
 
+            console.log('VP file selected:', file.name);
+
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('VP file loaded, length:', e.target.result.length);
                 parseVietPhraseFile(e.target.result);
                 saveSettings();
                 if (translationEnabled) {
                     loadChapter(currentChapter);
                 }
+                alert('Đã tải file VP thành công!');
+            };
+            reader.onerror = function(e) {
+                console.error('Error reading VP file:', e);
+                alert('Lỗi khi đọc file VP. Vui lòng thử lại!');
             };
             reader.readAsText(file, 'UTF-8');
         }

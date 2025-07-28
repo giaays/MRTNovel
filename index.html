@@ -80,7 +80,7 @@
             min-width: 200px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             border-radius: 12px;
-            z-index: 100;
+            z-index: 1000;
             top: 100%;
             left: 50%;
             transform: translateX(-50%);
@@ -423,6 +423,43 @@
             background: rgba(102, 126, 234, 0.15);
             border-color: #764ba2;
         }
+
+        /* Notification System */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+        }
+
+        .notification.error {
+            background: linear-gradient(45deg, #e53e3e, #c53030);
+        }
+
+        .notification.info {
+            background: linear-gradient(45deg, #3182ce, #2c5aa0);
+        }
+
+        .notification.warning {
+            background: linear-gradient(45deg, #ed8936, #dd6b20);
+        }
     </style>
 </head>
 <body>
@@ -575,12 +612,14 @@
 
         // Built-in translation data
         const builtinNames = {
-            '张三': '张三',
-            '李四': '李四',
-            '王五': '王五',
-            '赵六': '赵六',
-            '小明': '小明',
-            '小红': '小红'
+            '张三': 'Trương Tam',
+            '李四': 'Lý Tứ',
+            '王五': 'Vương Ngũ',
+            '赵六': 'Triệu Lục',
+            '小明': 'Tiểu Minh',
+            '小红': 'Tiểu Hồng',
+            '长干里': 'Trường Can Lý',
+            '两小无嫌猜': 'Lưỡng tiểu vô hiềm đoán'
         };
 
         const builtinPhrases = {
@@ -588,7 +627,12 @@
             '谢谢': 'cảm ơn',
             '再见': 'tạm biệt',
             '对不起': 'xin lỗi',
-            '没关系': 'không sao'
+            '没关系': 'không sao',
+            '武功': 'võ công',
+            '江湖': 'g강호',
+            '修炼': 'tu luyện',
+            '师父': 'sư phụ',
+            '弟子': 'đệ tử'
         };
 
         const builtinPinyin = {
@@ -660,16 +704,25 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const content = e.target.result;
-                if (type === 'names') {
-                    parseNamesFile(content);
-                } else if (type === 'phrases') {
-                    parseVietPhraseFile(content);
-                } else if (type === 'pinyin') {
-                    parsePinyinFile(content);
-                }
-                saveSettings();
-                if (translationEnabled) {
-                    loadChapter(currentChapter);
+                let fileName = file.name;
+                
+                try {
+                    if (type === 'names') {
+                        parseNamesFile(content);
+                        showNotification(`✅ Đã tải thành công file tên nhân vật: ${fileName}`, 'success');
+                    } else if (type === 'phrases') {
+                        parseVietPhraseFile(content);
+                        showNotification(`✅ Đã tải thành công file cụm từ: ${fileName}`, 'success');
+                    } else if (type === 'pinyin') {
+                        parsePinyinFile(content);
+                        showNotification(`✅ Đã tải thành công file phiên âm: ${fileName}`, 'success');
+                    }
+                    saveSettings();
+                    if (translationEnabled) {
+                        loadChapter(currentChapter);
+                    }
+                } catch (error) {
+                    showNotification(`❌ Lỗi khi tải file ${fileName}: ${error.message}`, 'error');
                 }
             };
             reader.readAsText(file, 'UTF-8');
@@ -729,6 +782,9 @@
                 namesDict = { ...builtinNames };
                 vietPhraseDict = { ...builtinPhrases };
                 pinyinDict = { ...builtinPinyin };
+                
+                // Show notification for builtin mode
+                showNotification('✅ Đã tải data có sẵn trong hệ thống!', 'success');
             } else {
                 // Keep existing custom data or reset to empty
                 if (Object.keys(namesDict).length === 0) {
@@ -736,6 +792,7 @@
                     vietPhraseDict = {};
                     pinyinDict = {};
                 }
+                showNotification('📁 Chế độ upload file cá nhân đã được kích hoạt', 'info');
             }
             
             saveSettings();
@@ -880,10 +937,15 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                parseNamesFile(e.target.result);
-                saveSettings();
-                if (translationEnabled) {
-                    loadChapter(currentChapter);
+                try {
+                    parseNamesFile(e.target.result);
+                    showNotification(`✅ Đã tải thành công file tên nhân vật: ${file.name}`, 'success');
+                    saveSettings();
+                    if (translationEnabled) {
+                        loadChapter(currentChapter);
+                    }
+                } catch (error) {
+                    showNotification(`❌ Lỗi khi tải file ${file.name}: ${error.message}`, 'error');
                 }
             };
             reader.readAsText(file, 'UTF-8');
@@ -895,9 +957,16 @@
             }
             const lines = content.split('\n');
             lines.forEach(line => {
-                const parts = line.trim().split('=');
-                if (parts.length === 2) {
-                    namesDict[parts[0].trim()] = parts[1].trim();
+                line = line.trim();
+                if (line && !line.startsWith('#')) { // Skip empty lines and comments
+                    const parts = line.split('=');
+                    if (parts.length >= 2) {
+                        const key = parts[0].trim();
+                        const value = parts.slice(1).join('=').trim(); // Handle = in values
+                        if (key && value) {
+                            namesDict[key] = value;
+                        }
+                    }
                 }
             });
         }
@@ -908,10 +977,15 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                parseVietPhraseFile(e.target.result);
-                saveSettings();
-                if (translationEnabled) {
-                    loadChapter(currentChapter);
+                try {
+                    parseVietPhraseFile(e.target.result);
+                    showNotification(`✅ Đã tải thành công file cụm từ: ${file.name}`, 'success');
+                    saveSettings();
+                    if (translationEnabled) {
+                        loadChapter(currentChapter);
+                    }
+                } catch (error) {
+                    showNotification(`❌ Lỗi khi tải file ${file.name}: ${error.message}`, 'error');
                 }
             };
             reader.readAsText(file, 'UTF-8');
@@ -923,9 +997,16 @@
             }
             const lines = content.split('\n');
             lines.forEach(line => {
-                const parts = line.trim().split('=');
-                if (parts.length === 2) {
-                    vietPhraseDict[parts[0].trim()] = parts[1].trim();
+                line = line.trim();
+                if (line && !line.startsWith('#')) { // Skip empty lines and comments
+                    const parts = line.split('=');
+                    if (parts.length >= 2) {
+                        const key = parts[0].trim();
+                        const value = parts.slice(1).join('=').trim(); // Handle = in values
+                        if (key && value) {
+                            vietPhraseDict[key] = value;
+                        }
+                    }
                 }
             });
         }
@@ -936,8 +1017,13 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                parsePinyinFile(e.target.result);
-                saveSettings();
+                try {
+                    parsePinyinFile(e.target.result);
+                    showNotification(`✅ Đã tải thành công file phiên âm: ${file.name}`, 'success');
+                    saveSettings();
+                } catch (error) {
+                    showNotification(`❌ Lỗi khi tải file ${file.name}: ${error.message}`, 'error');
+                }
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -948,9 +1034,16 @@
             }
             const lines = content.split('\n');
             lines.forEach(line => {
-                const parts = line.trim().split('=');
-                if (parts.length === 2) {
-                    pinyinDict[parts[0].trim()] = parts[1].trim();
+                line = line.trim();
+                if (line && !line.startsWith('#')) { // Skip empty lines and comments
+                    const parts = line.split('=');
+                    if (parts.length >= 2) {
+                        const key = parts[0].trim();
+                        const value = parts.slice(1).join('=').trim(); // Handle = in values
+                        if (key && value) {
+                            pinyinDict[key] = value;
+                        }
+                    }
                 }
             });
         }
@@ -964,6 +1057,13 @@
         }
 
         function applyTranslation(text) {
+            let translatedText = text;
+
+            // Apply names translation with better regex handling
+            Object.keys(namesDict).forEach(chineseName => {
+                const vietnameseName = namesDict[chineseName];
+                // Escape special regex characters
+                const escapedName = chineseName.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
             let translatedText = text;
 
             // Apply names translation
@@ -981,6 +1081,39 @@
             });
 
             return translatedText;
+        }');
+                const regex = new RegExp(escapedName, 'g');
+                translatedText = translatedText.replace(regex, vietnameseName);
+            });
+
+            // Apply phrase translation with better regex handling
+            Object.keys(vietPhraseDict).forEach(chinesePhrase => {
+                const vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                // Escape special regex characters
+                const escapedPhrase = chinesePhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
+            let translatedText = text;
+
+            // Apply names translation
+            Object.keys(namesDict).forEach(chineseName => {
+                const vietnameseName = namesDict[chineseName];
+                const regex = new RegExp(chineseName, 'g');
+                translatedText = translatedText.replace(regex, vietnameseName);
+            });
+
+            // Apply phrase translation
+            Object.keys(vietPhraseDict).forEach(chinesePhrase => {
+                const vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                const regex = new RegExp(chinesePhrase, 'g');
+                translatedText = translatedText.replace(regex, vietnamesePhrase);
+            });
+
+            return translatedText;
+        }');
+                const regex = new RegExp(escapedPhrase, 'g');
+                translatedText = translatedText.replace(regex, vietnamesePhrase);
+            });
+
+            return translatedText;
         }
 
         function highlightNames() {
@@ -988,7 +1121,20 @@
             let html = content.innerHTML;
 
             Object.keys(namesDict).forEach(name => {
+                // Escape special regex characters
+                const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\        function highlightNames() {
+            const content = document.getElementById('chapterContent');
+            let html = content.innerHTML;
+
+            Object.keys(namesDict).forEach(name => {
                 const regex = new RegExp(`(${name})`, 'g');
+                html = html.replace(regex, '<span class="char-highlight">$1</span>');
+            });
+
+            content.innerHTML = html;
+            closeOtherMenus('');
+        }');
+                const regex = new RegExp(`(${escapedName})`, 'g');
                 html = html.replace(regex, '<span class="char-highlight">$1</span>');
             });
 
@@ -1002,7 +1148,21 @@
 
             Object.keys(pinyinDict).forEach(char => {
                 const pinyin = pinyinDict[char];
+                // Escape special regex characters
+                const escapedChar = char.replace(/[.*+?^${}()|[\]\\]/g, '\\        function showPinyin() {
+            const content = document.getElementById('chapterContent');
+            let html = content.innerHTML;
+
+            Object.keys(pinyinDict).forEach(char => {
+                const pinyin = pinyinDict[char];
                 const regex = new RegExp(`(${char})`, 'g');
+                html = html.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
+            });
+
+            content.innerHTML = html;
+            closeOtherMenus('');
+        }');
+                const regex = new RegExp(`(${escapedChar})`, 'g');
                 html = html.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
             });
 
@@ -1258,6 +1418,35 @@
                 alert('Đã xóa tất cả dữ liệu!');
             }
             closeOtherMenus('');
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info', duration = 3000) {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(n => n.remove());
+
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Hide notification after duration
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, duration);
         }
 
         // Close modal when clicking outside

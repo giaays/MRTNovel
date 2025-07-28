@@ -1,7 +1,4 @@
-.add-name-popup .cancel-btn {
-            background: #f44336;
-            color: white;
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -387,6 +384,11 @@
             color: white;
         }
 
+        .add-name-popup .cancel-btn {
+            background: #f44336;
+            color: white;
+        }
+
         .translation-progress {
             position: fixed;
             top: 50%;
@@ -530,7 +532,6 @@
         var vietPhraseDict = {};
         var pinyinDict = {};
         var translationEnabled = false;
-        var readingPosition = {};
         var addNameMode = false;
         var selectedText = '';
         var addNamePopup = null;
@@ -571,16 +572,10 @@
             var file = event.target.files[0];
             if (!file) return;
 
-            console.log('File selected:', file.name);
             var reader = new FileReader();
             reader.onload = function(e) {
-                console.log('File loaded, length:', e.target.result.length);
                 currentStory = e.target.result;
                 parseStory();
-            };
-            reader.onerror = function(e) {
-                console.error('Error reading file:', e);
-                alert('Lỗi khi đọc file. Vui lòng thử lại!');
             };
             reader.readAsText(file, 'UTF-8');
         }
@@ -588,9 +583,6 @@
         function parseStory() {
             if (!currentStory) return;
 
-            console.log('Parsing story, length:', currentStory.length);
-
-            // Chapter detection patterns
             var chapterPatterns = [
                 /第[一二三四五六七八九十百千万\d]+章[^\n\r]*/gi,
                 /Chapter\s*\d+[^\n\r]*/gi,
@@ -613,12 +605,8 @@
                 }
             });
 
-            console.log('Found matches:', matches.length);
-
-            // Sort by position in text
             matches.sort(function(a, b) { return a.index - b.index; });
 
-            // Remove duplicates
             var uniqueMatches = [];
             matches.forEach(function(match) {
                 var exists = false;
@@ -633,8 +621,6 @@
                 }
             });
 
-            console.log('Unique matches:', uniqueMatches.length);
-
             chapters = [];
             for (var i = 0; i < uniqueMatches.length; i++) {
                 var start = uniqueMatches[i].index;
@@ -648,9 +634,7 @@
                 });
             }
 
-            // If no chapters found, create one big chapter
             if (chapters.length === 0) {
-                console.log('No chapters found, creating single chapter');
                 chapters.push({
                     title: 'Toàn bộ truyện',
                     content: currentStory,
@@ -658,7 +642,6 @@
                 });
             }
 
-            console.log('Final chapters count:', chapters.length);
             renderTOC();
             loadChapter(0);
             updateProgress();
@@ -680,44 +663,46 @@
         function loadChapter(index) {
             if (index < 0 || index >= chapters.length) return;
 
-            console.log('Loading chapter:', index, 'Translation enabled:', translationEnabled);
             currentChapter = index;
             var chapter = chapters[index];
 
             // Update title immediately
             document.getElementById('chapterTitle').textContent = chapter.title;
-            console.log('Title updated to:', chapter.title);
-
-            // Get content
+            
             var content = chapter.content;
-            console.log('Original content length:', content.length);
+            console.log('Loading chapter:', index, 'Content length:', content.length);
 
-            // Apply translation if enabled
-            if (translationEnabled && content.length > 5000) {
-                // For large content, use async translation
-                showTranslationProgress();
+            // Show loading for large content
+            if (translationEnabled && content.length > 3000) {
+                document.getElementById('chapterContent').textContent = 'Đang dịch thuật, vui lòng chờ...';
+                
+                // Use setTimeout to prevent UI blocking
                 setTimeout(function() {
-                    applyTranslationAsync(content, function(translatedContent) {
-                        updateChapterDisplay(translatedContent, index);
-                        hideTranslationProgress();
-                    });
+                    try {
+                        var translatedContent = applyTranslation(content);
+                        updateChapterContent(translatedContent, index);
+                    } catch (error) {
+                        console.error('Error during translation:', error);
+                        alert('Lỗi khi dịch thuật. Hiển thị nội dung gốc.');
+                        updateChapterContent(content, index);
+                    }
                 }, 100);
-            } else if (translationEnabled) {
-                // For small content, use sync translation
-                console.log('Applying translation...');
-                content = applyTranslation(content);
-                console.log('Translated content length:', content.length);
-                updateChapterDisplay(content, index);
             } else {
-                updateChapterDisplay(content, index);
+                // For small content or no translation
+                if (translationEnabled) {
+                    try {
+                        content = applyTranslation(content);
+                    } catch (error) {
+                        console.error('Error during translation:', error);
+                        alert('Lỗi khi dịch thuật. Hiển thị nội dung gốc.');
+                    }
+                }
+                updateChapterContent(content, index);
             }
         }
 
-        function updateChapterDisplay(content, index) {
-            // Update content
-            var contentElement = document.getElementById('chapterContent');
-            contentElement.textContent = content;
-            console.log('Content element updated');
+        function updateChapterContent(content, index) {
+            document.getElementById('chapterContent').textContent = content;
 
             // Update TOC active state
             var tocItems = document.querySelectorAll('.toc-item');
@@ -734,7 +719,7 @@
             document.getElementById('nextBtn').disabled = index === chapters.length - 1;
 
             updateProgress();
-            console.log('Chapter loading completed');
+            console.log('Chapter loaded successfully');
         }
 
         function previousChapter() {
@@ -771,8 +756,6 @@
                     var key = parts[0].trim();
                     var value = parts[1].trim();
                     
-                    // Handle multiple options separated by / or |
-                    // Only take the first option
                     if (value.includes('/')) {
                         value = value.split('/')[0].trim();
                     } else if (value.includes('|')) {
@@ -780,10 +763,8 @@
                     }
                     
                     namesDict[key] = value;
-                    console.log('Name parsed: "' + key + '" = "' + value + '"');
                 }
             });
-            console.log('Parsed names count:', Object.keys(namesDict).length);
         }
 
         function handleVietPhraseFile(event) {
@@ -807,8 +788,6 @@
                     var key = parts[0].trim();
                     var value = parts[1].trim();
                     
-                    // Handle multiple options separated by / or |
-                    // Only take the first option
                     if (value.includes('/')) {
                         value = value.split('/')[0].trim();
                     } else if (value.includes('|')) {
@@ -816,10 +795,8 @@
                     }
                     
                     vietPhraseDict[key] = value;
-                    console.log('VP parsed: "' + key + '" = "' + value + '"');
                 }
             });
-            console.log('Parsed VP count:', Object.keys(vietPhraseDict).length);
         }
 
         function handlePinyinFile(event) {
@@ -843,8 +820,6 @@
                     var key = parts[0].trim();
                     var value = parts[1].trim();
                     
-                    // Handle multiple options separated by / or |
-                    // Only take the first option
                     if (value.includes('/')) {
                         value = value.split('/')[0].trim();
                     } else if (value.includes('|')) {
@@ -852,10 +827,8 @@
                     }
                     
                     pinyinDict[key] = value;
-                    console.log('Hán Việt parsed: "' + key + '" = "' + value + '"');
                 }
             });
-            console.log('Parsed Hán Việt count:', Object.keys(pinyinDict).length);
         }
 
         function toggleTranslation() {
@@ -867,10 +840,10 @@
                 var hasVP = Object.keys(vietPhraseDict).length > 0;
                 var hasPinyin = Object.keys(pinyinDict).length > 0;
                 
-                console.log('Has names:', hasNames, 'Has VP:', hasVP, 'Has Hán Việt:', hasPinyin);
+                console.log('Available data - Names:', hasNames, 'VP:', hasVP, 'Hán Việt:', hasPinyin);
                 
                 if (!hasNames && !hasVP && !hasPinyin) {
-                    alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file:\n• Tên nhân vật (.txt)\n• VP - Cụm từ Việt (.txt)\n• Âm Hán Việt (.txt)\n\nTrước khi bật chế độ dịch.');
+                    alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file:\n• Tên nhân vật (.txt)\n• VP - Cụm từ Việt (.txt)\n• Âm Hán Việt (.txt)');
                     translationEnabled = false;
                     return;
                 }
@@ -880,299 +853,100 @@
                 if (hasVP) dataInfo += '• ' + Object.keys(vietPhraseDict).length + ' cụm từ VP\n';
                 if (hasPinyin) dataInfo += '• ' + Object.keys(pinyinDict).length + ' ký tự Hán Việt\n';
                 
-                dataInfo += '\n📝 Thứ tự dịch:\n1. Tên nhân vật\n2. Cụm từ VP\n3. Âm Hán Việt (cho ký tự còn lại)';
-                
+                dataInfo += '\n⏳ Đang áp dụng dịch thuật...';
                 alert(dataInfo);
                 
-                // Force reload current chapter with translation
+                // Apply translation with delay
                 if (chapters.length > 0) {
-                    console.log('Reloading chapter with translation...');
                     loadChapter(currentChapter);
                 }
             } else {
                 alert('❌ Đã TẮT chế độ dịch thuật!');
-                // Force reload current chapter without translation
                 if (chapters.length > 0) {
-                    console.log('Reloading chapter without translation...');
                     loadChapter(currentChapter);
                 }
             }
         }
 
         function applyTranslation(text) {
+            if (!text || text.length === 0) return text;
+            
             var translatedText = text;
-            console.log('Starting translation process...');
-            console.log('Names dict keys:', Object.keys(namesDict));
-            console.log('VP dict keys:', Object.keys(vietPhraseDict));
-            console.log('Pinyin (Hán Việt) dict keys:', Object.keys(pinyinDict));
-
+            console.log('Starting translation...');
+            
             try {
-                // Step 1: Apply names translation FIRST
+                // Step 1: Apply names translation
                 if (Object.keys(namesDict).length > 0) {
                     console.log('Applying names translation...');
                     var nameKeys = Object.keys(namesDict);
                     for (var i = 0; i < nameKeys.length; i++) {
                         var chineseName = nameKeys[i];
                         var vietnameseName = namesDict[chineseName];
-                        try {
-                            var regex = new RegExp(chineseName, 'g');
-                            var beforeText = translatedText;
-                            translatedText = translatedText.replace(regex, vietnameseName);
-                            
-                            if (beforeText !== translatedText) {
-                                console.log('✓ Replaced "' + chineseName + '" with "' + vietnameseName + '"');
+                        if (chineseName && vietnameseName && chineseName !== vietnameseName) {
+                            // Use simple string replace to avoid regex issues
+                            while (translatedText.indexOf(chineseName) !== -1) {
+                                translatedText = translatedText.replace(chineseName, vietnameseName);
                             }
-                        } catch (regexError) {
-                            console.error('Regex error for "' + chineseName + '":', regexError);
-                            // Fallback to simple replace
-                            translatedText = translatedText.split(chineseName).join(vietnameseName);
+                            console.log('Replaced: ' + chineseName + ' → ' + vietnameseName);
                         }
                     }
                 }
 
-                // Step 2: Apply phrase translation SECOND
+                // Step 2: Apply VP translation
                 if (Object.keys(vietPhraseDict).length > 0) {
                     console.log('Applying VP translation...');
                     var vpKeys = Object.keys(vietPhraseDict);
                     for (var j = 0; j < vpKeys.length; j++) {
                         var chinesePhrase = vpKeys[j];
                         var vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                        try {
-                            var regex = new RegExp(chinesePhrase, 'g');
-                            var beforeText = translatedText;
-                            translatedText = translatedText.replace(regex, vietnamesePhrase);
-                            
-                            if (beforeText !== translatedText) {
-                                console.log('✓ Replaced "' + chinesePhrase + '" with "' + vietnamesePhrase + '"');
+                        if (chinesePhrase && vietnamesePhrase && chinesePhrase !== vietnamesePhrase) {
+                            while (translatedText.indexOf(chinesePhrase) !== -1) {
+                                translatedText = translatedText.replace(chinesePhrase, vietnamesePhrase);
                             }
-                        } catch (regexError) {
-                            console.error('Regex error for "' + chinesePhrase + '":', regexError);
-                            // Fallback to simple replace
-                            translatedText = translatedText.split(chinesePhrase).join(vietnamesePhrase);
+                            console.log('Replaced: ' + chinesePhrase + ' → ' + vietnamesePhrase);
                         }
                     }
                 }
 
-                // Step 3: Apply Hán Việt pronunciation for remaining Chinese characters
+                // Step 3: Apply Hán Việt (only for single characters)
                 if (Object.keys(pinyinDict).length > 0) {
-                    console.log('Applying Hán Việt for untranslated characters...');
+                    console.log('Applying Hán Việt translation...');
                     var pinyinKeys = Object.keys(pinyinDict);
-                    var hanVietApplied = 0;
-                    
                     for (var k = 0; k < pinyinKeys.length; k++) {
                         var chineseChar = pinyinKeys[k];
                         var hanViet = pinyinDict[chineseChar];
-                        
-                        // Check if this character exists in the text and hasn't been translated
-                        if (translatedText.includes(chineseChar)) {
-                            try {
-                                var regex = new RegExp(chineseChar, 'g');
-                                var beforeText = translatedText;
-                                translatedText = translatedText.replace(regex, hanViet);
-                                
-                                if (beforeText !== translatedText) {
-                                    console.log('✓ Applied Hán Việt "' + chineseChar + '" → "' + hanViet + '"');
-                                    hanVietApplied++;
-                                }
-                            } catch (regexError) {
-                                console.error('Regex error for Hán Việt "' + chineseChar + '":', regexError);
-                                // Fallback to simple replace
-                                translatedText = translatedText.split(chineseChar).join(hanViet);
-                                hanVietApplied++;
+                        if (chineseChar && hanViet && chineseChar !== hanViet && chineseChar.length === 1) {
+                            // Only replace single characters to avoid infinite loops
+                            var count = 0;
+                            while (translatedText.indexOf(chineseChar) !== -1 && count < 1000) {
+                                translatedText = translatedText.replace(chineseChar, hanViet);
+                                count++;
+                            }
+                            if (count > 0) {
+                                console.log('Replaced: ' + chineseChar + ' → ' + hanViet + ' (' + count + ' times)');
                             }
                         }
                     }
-                    
-                    if (hanVietApplied > 0) {
-                        console.log('✓ Applied Hán Việt to ' + hanVietApplied + ' characters');
-                    }
                 }
 
-                console.log('✅ Translation completed successfully');
+                console.log('Translation completed successfully');
                 return translatedText;
+                
             } catch (error) {
-                console.error('❌ Translation failed:', error);
-                return text; // Return original text if translation fails
+                console.error('Translation error:', error);
+                alert('Lỗi khi dịch thuật: ' + error.message);
+                return text; // Return original text if error
             }
         }
 
-        function applyTranslationAsync(text, callback) {
-            var translatedText = text;
-            var currentStep = 0;
-            var totalSteps = 3;
-            
-            console.log('Starting async translation process...');
-            updateTranslationStep(1, 'Names', 'active');
-
-            // Step 1: Names translation
-            setTimeout(function() {
-                if (Object.keys(namesDict).length > 0) {
-                    console.log('Applying names translation...');
-                    var nameKeys = Object.keys(namesDict);
-                    var batchSize = 10; // Process 10 names at a time
-                    var currentBatch = 0;
-                    
-                    function processNameBatch() {
-                        var start = currentBatch * batchSize;
-                        var end = Math.min(start + batchSize, nameKeys.length);
-                        
-                        for (var i = start; i < end; i++) {
-                            var chineseName = nameKeys[i];
-                            var vietnameseName = namesDict[chineseName];
-                            try {
-                                translatedText = translatedText.split(chineseName).join(vietnameseName);
-                            } catch (error) {
-                                console.error('Error replacing name:', chineseName);
-                            }
-                        }
-                        
-                        currentBatch++;
-                        if (currentBatch * batchSize < nameKeys.length) {
-                            setTimeout(processNameBatch, 10); // Small delay to prevent blocking
-                        } else {
-                            // Move to step 2
-                            updateTranslationStep(1, 'Names', 'completed');
-                            updateTranslationStep(2, 'VP', 'active');
-                            setTimeout(processVP, 50);
-                        }
-                    }
-                    
-                    processNameBatch();
-                } else {
-                    updateTranslationStep(1, 'Names', 'completed');
-                    updateTranslationStep(2, 'VP', 'active');
-                    setTimeout(processVP, 50);
-                }
-            }, 50);
-
-            // Step 2: VP translation
-            function processVP() {
-                if (Object.keys(vietPhraseDict).length > 0) {
-                    console.log('Applying VP translation...');
-                    var vpKeys = Object.keys(vietPhraseDict);
-                    var batchSize = 10;
-                    var currentBatch = 0;
-                    
-                    function processVPBatch() {
-                        var start = currentBatch * batchSize;
-                        var end = Math.min(start + batchSize, vpKeys.length);
-                        
-                        for (var j = start; j < end; j++) {
-                            var chinesePhrase = vpKeys[j];
-                            var vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                            try {
-                                translatedText = translatedText.split(chinesePhrase).join(vietnamesePhrase);
-                            } catch (error) {
-                                console.error('Error replacing VP:', chinesePhrase);
-                            }
-                        }
-                        
-                        currentBatch++;
-                        if (currentBatch * batchSize < vpKeys.length) {
-                            setTimeout(processVPBatch, 10);
-                        } else {
-                            // Move to step 3
-                            updateTranslationStep(2, 'VP', 'completed');
-                            updateTranslationStep(3, 'Hán Việt', 'active');
-                            setTimeout(processHanViet, 50);
-                        }
-                    }
-                    
-                    processVPBatch();
-                } else {
-                    updateTranslationStep(2, 'VP', 'completed');
-                    updateTranslationStep(3, 'Hán Việt', 'active');
-                    setTimeout(processHanViet, 50);
-                }
-            }
-
-            // Step 3: Hán Việt translation
-            function processHanViet() {
-                if (Object.keys(pinyinDict).length > 0) {
-                    console.log('Applying Hán Việt...');
-                    var pinyinKeys = Object.keys(pinyinDict);
-                    var batchSize = 20;
-                    var currentBatch = 0;
-                    
-                    function processHanVietBatch() {
-                        var start = currentBatch * batchSize;
-                        var end = Math.min(start + batchSize, pinyinKeys.length);
-                        
-                        for (var k = start; k < end; k++) {
-                            var chineseChar = pinyinKeys[k];
-                            var hanViet = pinyinDict[chineseChar];
-                            if (translatedText.includes(chineseChar)) {
-                                try {
-                                    translatedText = translatedText.split(chineseChar).join(hanViet);
-                                } catch (error) {
-                                    console.error('Error replacing Hán Việt:', chineseChar);
-                                }
-                            }
-                        }
-                        
-                        currentBatch++;
-                        if (currentBatch * batchSize < pinyinKeys.length) {
-                            setTimeout(processHanVietBatch, 10);
-                        } else {
-                            // Complete
-                            updateTranslationStep(3, 'Hán Việt', 'completed');
-                            setTimeout(function() {
-                                console.log('✅ Async translation completed');
-                                callback(translatedText);
-                            }, 100);
-                        }
-                    }
-                    
-                    processHanVietBatch();
-                } else {
-                    updateTranslationStep(3, 'Hán Việt', 'completed');
-                    setTimeout(function() {
-                        console.log('✅ Async translation completed');
-                        callback(translatedText);
-                    }, 100);
-                }
-            }
-        }
-
-        function showTranslationProgress() {
-            var progressDiv = document.createElement('div');
-            progressDiv.id = 'translationProgress';
-            progressDiv.className = 'translation-progress';
-            progressDiv.innerHTML = 
-                '<div class="spinner"></div>' +
-                '<div><strong>Đang dịch thuật...</strong></div>' +
-                '<div class="progress-step" id="step1">1. Tên nhân vật</div>' +
-                '<div class="progress-step" id="step2">2. Cụm từ VP</div>' +
-                '<div class="progress-step" id="step3">3. Âm Hán Việt</div>';
-            
-            document.body.appendChild(progressDiv);
-        }
-
-        function updateTranslationStep(stepNumber, stepName, status) {
-            var stepElement = document.getElementById('step' + stepNumber);
-            if (stepElement) {
-                stepElement.className = 'progress-step ' + status;
-                if (status === 'active') {
-                    stepElement.textContent = stepNumber + '. ' + stepName + ' - Đang xử lý...';
-                } else if (status === 'completed') {
-                    stepElement.textContent = stepNumber + '. ' + stepName + ' - Hoàn thành ✓';
-                }
-            }
-        }
-
-        function hideTranslationProgress() {
-            var progressDiv = document.getElementById('translationProgress');
-            if (progressDiv) {
-                document.body.removeChild(progressDiv);
-            }
-        }
+        // Add Name Mode functions
         function toggleAddNameMode() {
             addNameMode = !addNameMode;
             var reader = document.querySelector('.reader');
             
             if (addNameMode) {
                 reader.classList.add('add-name-mode');
-                alert('🎯 Add Name Mode BẬT!\n\n• Highlight text bằng cách drag chuột\n• Popup sẽ xuất hiện để thêm tên mới\n• Click "➕ Add Name Mode" lần nữa để tắt');
+                alert('🎯 Add Name Mode BẬT!\n\n• Highlight text bằng cách drag chuột\n• Popup sẽ xuất hiện để thêm tên mới');
                 setupTextSelection();
             } else {
                 reader.classList.remove('add-name-mode');
@@ -1196,14 +970,14 @@
             var selection = window.getSelection();
             var text = selection.toString().trim();
             
-            if (text.length > 0 && text.length <= 10) { // Reasonable name length
+            if (text.length > 0 && text.length <= 10) {
                 selectedText = text;
                 showAddNamePopup(event.pageX, event.pageY);
             }
         }
 
         function showAddNamePopup(x, y) {
-            closeAddNamePopup(); // Close existing popup
+            closeAddNamePopup();
             
             addNamePopup = document.createElement('div');
             addNamePopup.className = 'add-name-popup';
@@ -1215,13 +989,11 @@
                 '<button class="cancel-btn" onclick="closeAddNamePopup()">❌ Hủy</button>' +
                 '</div>';
             
-            // Position popup
             addNamePopup.style.left = Math.min(x, window.innerWidth - 270) + 'px';
             addNamePopup.style.top = Math.min(y, window.innerHeight - 150) + 'px';
             
             document.body.appendChild(addNamePopup);
             
-            // Focus input
             setTimeout(function() {
                 document.getElementById('newNameViet').focus();
             }, 100);
@@ -1235,19 +1007,15 @@
                 return;
             }
             
-            // Add to namesDict
             namesDict[selectedText] = vietName;
-            console.log('Added new name: ' + selectedText + ' = ' + vietName);
-            
             alert('✅ Đã thêm: ' + selectedText + ' → ' + vietName);
             
-            // Update display if translation is enabled
             if (translationEnabled) {
                 loadChapter(currentChapter);
             }
             
             closeAddNamePopup();
-            window.getSelection().removeAllRanges(); // Clear selection
+            window.getSelection().removeAllRanges();
         }
 
         function closeAddNamePopup() {
@@ -1259,7 +1027,7 @@
 
         function highlightNames() {
             if (Object.keys(namesDict).length === 0) {
-                alert('Chưa có dữ liệu tên nhân vật. Vui lòng tải file tên nhân vật trước!');
+                alert('Chưa có dữ liệu tên nhân vật!');
                 return;
             }
             
@@ -1278,7 +1046,7 @@
 
         function showPinyin() {
             if (Object.keys(pinyinDict).length === 0) {
-                alert('Chưa có dữ liệu âm Hán Việt. Vui lòng tải file âm Hán Việt trước!');
+                alert('Chưa có dữ liệu âm Hán Việt!');
                 return;
             }
             
@@ -1390,16 +1158,13 @@
                 vietPhraseDict = {};
                 pinyinDict = {};
                 translationEnabled = false;
-                readingPosition = {};
                 
-                // Reset UI
                 document.getElementById('tocList').innerHTML = 'Vui lòng chọn file truyện để bắt đầu';
                 document.getElementById('chapterContent').innerHTML = 'Đang chờ bạn tải file truyện...<br><br><strong>Hướng dẫn:</strong><br>1. Chọn file truyện (.txt) tiếng Trung<br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, âm Hán Việt)<br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.';
                 document.getElementById('chapterTitle').textContent = 'Chọn chương để đọc';
                 document.getElementById('progressText').textContent = 'Chưa có truyện';
                 document.getElementById('progressBar').style.width = '0%';
                 
-                // Clear file inputs
                 document.getElementById('storyFile').value = '';
                 document.getElementById('namesFile').value = '';
                 document.getElementById('vietPhraseFile').value = '';
@@ -1411,7 +1176,6 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            // Setup file handlers
             document.getElementById('storyFile').addEventListener('change', handleStoryFile);
             document.getElementById('namesFile').addEventListener('change', handleNamesFile);
             document.getElementById('vietPhraseFile').addEventListener('change', handleVietPhraseFile);

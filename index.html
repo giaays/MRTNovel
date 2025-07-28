@@ -352,12 +352,6 @@
             user-select: text;
         }
 
-        .selected-text {
-            background-color: rgba(33, 150, 243, 0.3);
-            color: #1976d2;
-            font-weight: bold;
-        }
-
         .add-name-popup {
             position: fixed;
             background: white;
@@ -421,7 +415,7 @@
                         <label for="vietPhraseFile" class="dropdown-item">🇻🇳 File VP</label>
                         <input type="file" id="vietPhraseFile" class="file-input" accept=".txt">
                         
-                        <label for="pinyinFile" class="dropdown-item">🔤 File Phiên Âm</label>
+                        <label for="pinyinFile" class="dropdown-item">🔤 File Âm Hán Việt</label>
                         <input type="file" id="pinyinFile" class="file-input" accept=".txt">
                     </div>
                 </div>
@@ -435,7 +429,7 @@
                         <button class="dropdown-item" onclick="toggleAddNameMode()">➕ Add Name Mode</button>
                         <button class="dropdown-item" onclick="openNameEditor()">✏️ Sửa Tên Nhân Vật</button>
                         <button class="dropdown-item" onclick="highlightNames()">🔍 Highlight Tên</button>
-                        <button class="dropdown-item" onclick="showPinyin()">📢 Hiện Phiên Âm</button>
+                        <button class="dropdown-item" onclick="showPinyin()">📢 Hiện Âm Hán Việt</button>
                     </div>
                 </div>
 
@@ -473,7 +467,7 @@
                     <br><br>
                     <strong>Hướng dẫn:</strong>
                     <br>1. Chọn file truyện (.txt) tiếng Trung
-                    <br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, phiên âm)
+                    <br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, âm Hán Việt)
                     <br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.
                 </div>
             </div>
@@ -493,35 +487,35 @@
 
     <script>
         // Global variables
-        let currentStory = '';
-        let chapters = [];
-        let currentChapter = 0;
-        let namesDict = {};
-        let vietPhraseDict = {};
-        let pinyinDict = {};
-        let translationEnabled = false;
-        let readingPosition = {};
-        let addNameMode = false;
-        let selectedText = '';
-        let addNamePopup = null;
+        var currentStory = '';
+        var chapters = [];
+        var currentChapter = 0;
+        var namesDict = {};
+        var vietPhraseDict = {};
+        var pinyinDict = {};
+        var translationEnabled = false;
+        var readingPosition = {};
+        var addNameMode = false;
+        var selectedText = '';
+        var addNamePopup = null;
 
         // Menu functions
         function toggleFileMenu() {
-            const menu = document.getElementById('fileMenu');
+            var menu = document.getElementById('fileMenu');
             menu.classList.toggle('show');
             document.getElementById('toolMenu').classList.remove('show');
             document.getElementById('dataMenu').classList.remove('show');
         }
 
         function toggleToolMenu() {
-            const menu = document.getElementById('toolMenu');
+            var menu = document.getElementById('toolMenu');
             menu.classList.toggle('show');
             document.getElementById('fileMenu').classList.remove('show');
             document.getElementById('dataMenu').classList.remove('show');
         }
 
         function toggleDataMenu() {
-            const menu = document.getElementById('dataMenu');
+            var menu = document.getElementById('dataMenu');
             menu.classList.toggle('show');
             document.getElementById('fileMenu').classList.remove('show');
             document.getElementById('toolMenu').classList.remove('show');
@@ -538,11 +532,11 @@
 
         // File handling functions
         function handleStoryFile(event) {
-            const file = event.target.files[0];
+            var file = event.target.files[0];
             if (!file) return;
 
             console.log('File selected:', file.name);
-            const reader = new FileReader();
+            var reader = new FileReader();
             reader.onload = function(e) {
                 console.log('File loaded, length:', e.target.result.length);
                 currentStory = e.target.result;
@@ -561,7 +555,7 @@
             console.log('Parsing story, length:', currentStory.length);
 
             // Chapter detection patterns
-            const chapterPatterns = [
+            var chapterPatterns = [
                 /第[一二三四五六七八九十百千万\d]+章[^\n\r]*/gi,
                 /Chapter\s*\d+[^\n\r]*/gi,
                 /第\d+章[^\n\r]*/gi,
@@ -570,24 +564,35 @@
                 /^第[一二三四五六七八九十百千万\d]+回[^\n\r]*/gm
             ];
 
-            let matches = [];
-            chapterPatterns.forEach(pattern => {
-                const found = [...currentStory.matchAll(pattern)];
-                matches = matches.concat(found.map(match => ({
-                    title: match[0].trim(),
-                    index: match.index
-                })));
+            var matches = [];
+            chapterPatterns.forEach(function(pattern) {
+                var found = currentStory.match(pattern) || [];
+                for (var i = 0; i < found.length; i++) {
+                    var match = found[i];
+                    var index = currentStory.indexOf(match);
+                    matches.push({
+                        title: match.trim(),
+                        index: index
+                    });
+                }
             });
 
             console.log('Found matches:', matches.length);
 
             // Sort by position in text
-            matches.sort((a, b) => a.index - b.index);
+            matches.sort(function(a, b) { return a.index - b.index; });
 
             // Remove duplicates
-            let uniqueMatches = [];
-            matches.forEach(match => {
-                if (!uniqueMatches.find(um => Math.abs(um.index - match.index) < 10)) {
+            var uniqueMatches = [];
+            matches.forEach(function(match) {
+                var exists = false;
+                for (var i = 0; i < uniqueMatches.length; i++) {
+                    if (Math.abs(uniqueMatches[i].index - match.index) < 10) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
                     uniqueMatches.push(match);
                 }
             });
@@ -595,10 +600,10 @@
             console.log('Unique matches:', uniqueMatches.length);
 
             chapters = [];
-            for (let i = 0; i < uniqueMatches.length; i++) {
-                const start = uniqueMatches[i].index;
-                const end = i < uniqueMatches.length - 1 ? uniqueMatches[i + 1].index : currentStory.length;
-                const content = currentStory.substring(start, end).trim();
+            for (var i = 0; i < uniqueMatches.length; i++) {
+                var start = uniqueMatches[i].index;
+                var end = i < uniqueMatches.length - 1 ? uniqueMatches[i + 1].index : currentStory.length;
+                var content = currentStory.substring(start, end).trim();
                 
                 chapters.push({
                     title: uniqueMatches[i].title,
@@ -624,18 +629,14 @@
         }
 
         function renderTOC() {
-            const tocList = document.getElementById('tocList');
+            var tocList = document.getElementById('tocList');
             tocList.innerHTML = '';
-            console.log('Rendering TOC with', chapters.length, 'chapters');
 
-            chapters.forEach((chapter, index) => {
-                const item = document.createElement('div');
+            chapters.forEach(function(chapter, index) {
+                var item = document.createElement('div');
                 item.className = 'toc-item';
-                item.textContent = `${index + 1}. ${chapter.title}`;
-                item.onclick = () => {
-                    console.log('TOC clicked, loading chapter:', index);
-                    loadChapter(index);
-                };
+                item.textContent = (index + 1) + '. ' + chapter.title;
+                item.onclick = function() { loadChapter(index); };
                 tocList.appendChild(item);
             });
         }
@@ -645,14 +646,14 @@
 
             console.log('Loading chapter:', index, 'Translation enabled:', translationEnabled);
             currentChapter = index;
-            const chapter = chapters[index];
+            var chapter = chapters[index];
 
             // Update title
             document.getElementById('chapterTitle').textContent = chapter.title;
             console.log('Title updated to:', chapter.title);
 
             // Get content
-            let content = chapter.content;
+            var content = chapter.content;
             console.log('Original content length:', content.length);
 
             // Apply translation if enabled
@@ -662,14 +663,19 @@
                 console.log('Translated content length:', content.length);
             }
 
-            // Update content - ALWAYS update the content
-            const contentElement = document.getElementById('chapterContent');
+            // Update content
+            var contentElement = document.getElementById('chapterContent');
             contentElement.textContent = content;
             console.log('Content element updated');
 
             // Update TOC active state
-            document.querySelectorAll('.toc-item').forEach((item, i) => {
-                item.classList.toggle('active', i === index);
+            var tocItems = document.querySelectorAll('.toc-item');
+            tocItems.forEach(function(item, i) {
+                if (i === index) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
             });
 
             // Update navigation buttons
@@ -694,10 +700,10 @@
 
         // Translation functions
         function handleNamesFile(event) {
-            const file = event.target.files[0];
+            var file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
+            var reader = new FileReader();
             reader.onload = function(e) {
                 parseNamesFile(e.target.result);
                 alert('Đã tải file tên nhân vật thành công!');
@@ -707,21 +713,33 @@
 
         function parseNamesFile(content) {
             namesDict = {};
-            const lines = content.split('\n');
-            lines.forEach(line => {
-                const parts = line.trim().split('=');
+            var lines = content.split('\n');
+            lines.forEach(function(line) {
+                var parts = line.trim().split('=');
                 if (parts.length === 2) {
-                    namesDict[parts[0].trim()] = parts[1].trim();
+                    var key = parts[0].trim();
+                    var value = parts[1].trim();
+                    
+                    // Handle multiple options separated by / or |
+                    // Only take the first option
+                    if (value.includes('/')) {
+                        value = value.split('/')[0].trim();
+                    } else if (value.includes('|')) {
+                        value = value.split('|')[0].trim();
+                    }
+                    
+                    namesDict[key] = value;
+                    console.log('Name parsed: "' + key + '" = "' + value + '"');
                 }
             });
             console.log('Parsed names count:', Object.keys(namesDict).length);
         }
 
         function handleVietPhraseFile(event) {
-            const file = event.target.files[0];
+            var file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
+            var reader = new FileReader();
             reader.onload = function(e) {
                 parseVietPhraseFile(e.target.result);
                 alert('Đã tải file VP thành công!');
@@ -731,38 +749,62 @@
 
         function parseVietPhraseFile(content) {
             vietPhraseDict = {};
-            const lines = content.split('\n');
-            lines.forEach(line => {
-                const parts = line.trim().split('=');
+            var lines = content.split('\n');
+            lines.forEach(function(line) {
+                var parts = line.trim().split('=');
                 if (parts.length === 2) {
-                    vietPhraseDict[parts[0].trim()] = parts[1].trim();
+                    var key = parts[0].trim();
+                    var value = parts[1].trim();
+                    
+                    // Handle multiple options separated by / or |
+                    // Only take the first option
+                    if (value.includes('/')) {
+                        value = value.split('/')[0].trim();
+                    } else if (value.includes('|')) {
+                        value = value.split('|')[0].trim();
+                    }
+                    
+                    vietPhraseDict[key] = value;
+                    console.log('VP parsed: "' + key + '" = "' + value + '"');
                 }
             });
             console.log('Parsed VP count:', Object.keys(vietPhraseDict).length);
         }
 
         function handlePinyinFile(event) {
-            const file = event.target.files[0];
+            var file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
+            var reader = new FileReader();
             reader.onload = function(e) {
                 parsePinyinFile(e.target.result);
-                alert('Đã tải file phiên âm thành công!');
+                alert('Đã tải file âm Hán Việt thành công!');
             };
             reader.readAsText(file, 'UTF-8');
         }
 
         function parsePinyinFile(content) {
             pinyinDict = {};
-            const lines = content.split('\n');
-            lines.forEach(line => {
-                const parts = line.trim().split('=');
+            var lines = content.split('\n');
+            lines.forEach(function(line) {
+                var parts = line.trim().split('=');
                 if (parts.length === 2) {
-                    pinyinDict[parts[0].trim()] = parts[1].trim();
+                    var key = parts[0].trim();
+                    var value = parts[1].trim();
+                    
+                    // Handle multiple options separated by / or |
+                    // Only take the first option
+                    if (value.includes('/')) {
+                        value = value.split('/')[0].trim();
+                    } else if (value.includes('|')) {
+                        value = value.split('|')[0].trim();
+                    }
+                    
+                    pinyinDict[key] = value;
+                    console.log('Hán Việt parsed: "' + key + '" = "' + value + '"');
                 }
             });
-            console.log('Parsed pinyin count:', Object.keys(pinyinDict).length);
+            console.log('Parsed Hán Việt count:', Object.keys(pinyinDict).length);
         }
 
         function toggleTranslation() {
@@ -770,20 +812,24 @@
             console.log('Translation toggled to:', translationEnabled);
             
             if (translationEnabled) {
-                const hasNames = Object.keys(namesDict).length > 0;
-                const hasVP = Object.keys(vietPhraseDict).length > 0;
+                var hasNames = Object.keys(namesDict).length > 0;
+                var hasVP = Object.keys(vietPhraseDict).length > 0;
+                var hasPinyin = Object.keys(pinyinDict).length > 0;
                 
-                console.log('Has names:', hasNames, 'Has VP:', hasVP);
+                console.log('Has names:', hasNames, 'Has VP:', hasVP, 'Has Hán Việt:', hasPinyin);
                 
-                if (!hasNames && !hasVP) {
-                    alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file:\n• Tên nhân vật (.txt)\n• VP - Cụm từ Việt (.txt)\n\nTrước khi bật chế độ dịch.');
+                if (!hasNames && !hasVP && !hasPinyin) {
+                    alert('⚠️ Chưa có dữ liệu dịch thuật!\n\nVui lòng tải file:\n• Tên nhân vật (.txt)\n• VP - Cụm từ Việt (.txt)\n• Âm Hán Việt (.txt)\n\nTrước khi bật chế độ dịch.');
                     translationEnabled = false;
                     return;
                 }
                 
-                let dataInfo = '✅ Đã BẬT chế độ dịch thuật!\n\nDữ liệu có sẵn:\n';
-                if (hasNames) dataInfo += `• ${Object.keys(namesDict).length} tên nhân vật\n`;
-                if (hasVP) dataInfo += `• ${Object.keys(vietPhraseDict).length} cụm từ VP\n`;
+                var dataInfo = '✅ Đã BẬT chế độ dịch thuật!\n\nDữ liệu có sẵn:\n';
+                if (hasNames) dataInfo += '• ' + Object.keys(namesDict).length + ' tên nhân vật\n';
+                if (hasVP) dataInfo += '• ' + Object.keys(vietPhraseDict).length + ' cụm từ VP\n';
+                if (hasPinyin) dataInfo += '• ' + Object.keys(pinyinDict).length + ' ký tự Hán Việt\n';
+                
+                dataInfo += '\n📝 Thứ tự dịch:\n1. Tên nhân vật\n2. Cụm từ VP\n3. Âm Hán Việt (cho ký tự còn lại)';
                 
                 alert(dataInfo);
                 
@@ -803,127 +849,91 @@
         }
 
         function applyTranslation(text) {
-            let translatedText = text;
+            var translatedText = text;
             console.log('Starting translation process...');
             console.log('Names dict keys:', Object.keys(namesDict));
             console.log('VP dict keys:', Object.keys(vietPhraseDict));
+            console.log('Pinyin (Hán Việt) dict keys:', Object.keys(pinyinDict));
 
             try {
-                // Apply names translation FIRST
+                // Step 1: Apply names translation FIRST
                 if (Object.keys(namesDict).length > 0) {
                     console.log('Applying names translation...');
-                    for (const chineseName of Object.keys(namesDict)) {
-                        const vietnameseName = namesDict[chineseName];
+                    var nameKeys = Object.keys(namesDict);
+                    for (var i = 0; i < nameKeys.length; i++) {
+                        var chineseName = nameKeys[i];
+                        var vietnameseName = namesDict[chineseName];
                         try {
-                            // Escape special regex characters
-                            const escapedName = chineseName.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
-            let translatedText = text;
-            console.log('Starting translation process...');
-            console.log('Names dict keys:', Object.keys(namesDict));
-            console.log('VP dict keys:', Object.keys(vietPhraseDict));
-
-            // Apply names translation FIRST
-            if (Object.keys(namesDict).length > 0) {
-                console.log('Applying names translation...');
-                Object.keys(namesDict).forEach(chineseName => {
-                    const vietnameseName = namesDict[chineseName];
-                    const regex = new RegExp(chineseName, 'g');
-                    const matches = translatedText.match(regex);
-                    if (matches) {
-                        console.log(`Replacing "${chineseName}" with "${vietnameseName}" - found ${matches.length} matches`);
-                        translatedText = translatedText.replace(regex, vietnameseName);
-                    }
-                });
-            }
-
-            // Apply phrase translation SECOND
-            if (Object.keys(vietPhraseDict).length > 0) {
-                console.log('Applying VP translation...');
-                Object.keys(vietPhraseDict).forEach(chinesePhrase => {
-                    const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                    const regex = new RegExp(chinesePhrase, 'g');
-                    const matches = translatedText.match(regex);
-                    if (matches) {
-                        console.log(`Replacing "${chinesePhrase}" with "${vietnamesePhrase}" - found ${matches.length} matches`);
-                        translatedText = translatedText.replace(regex, vietnamesePhrase);
-                    }
-                });
-            }
-
-            console.log('Translation completed');
-            return translatedText;
-        }');
-                            const regex = new RegExp(escapedName, 'g');
-                            const beforeText = translatedText;
+                            var regex = new RegExp(chineseName, 'g');
+                            var beforeText = translatedText;
                             translatedText = translatedText.replace(regex, vietnameseName);
                             
                             if (beforeText !== translatedText) {
-                                console.log(`✓ Replaced "${chineseName}" with "${vietnameseName}"`);
+                                console.log('✓ Replaced "' + chineseName + '" with "' + vietnameseName + '"');
                             }
                         } catch (regexError) {
-                            console.error(`Regex error for "${chineseName}":`, regexError);
+                            console.error('Regex error for "' + chineseName + '":', regexError);
                             // Fallback to simple replace
-                            translatedText = translatedText.replaceAll(chineseName, vietnameseName);
+                            translatedText = translatedText.split(chineseName).join(vietnameseName);
                         }
                     }
                 }
 
-                // Apply phrase translation SECOND
+                // Step 2: Apply phrase translation SECOND
                 if (Object.keys(vietPhraseDict).length > 0) {
                     console.log('Applying VP translation...');
-                    for (const chinesePhrase of Object.keys(vietPhraseDict)) {
-                        const vietnamesePhrase = vietPhraseDict[chinesePhrase];
+                    var vpKeys = Object.keys(vietPhraseDict);
+                    for (var j = 0; j < vpKeys.length; j++) {
+                        var chinesePhrase = vpKeys[j];
+                        var vietnamesePhrase = vietPhraseDict[chinesePhrase];
                         try {
-                            // Escape special regex characters
-                            const escapedPhrase = chinesePhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\        function applyTranslation(text) {
-            let translatedText = text;
-            console.log('Starting translation process...');
-            console.log('Names dict keys:', Object.keys(namesDict));
-            console.log('VP dict keys:', Object.keys(vietPhraseDict));
-
-            // Apply names translation FIRST
-            if (Object.keys(namesDict).length > 0) {
-                console.log('Applying names translation...');
-                Object.keys(namesDict).forEach(chineseName => {
-                    const vietnameseName = namesDict[chineseName];
-                    const regex = new RegExp(chineseName, 'g');
-                    const matches = translatedText.match(regex);
-                    if (matches) {
-                        console.log(`Replacing "${chineseName}" with "${vietnameseName}" - found ${matches.length} matches`);
-                        translatedText = translatedText.replace(regex, vietnameseName);
-                    }
-                });
-            }
-
-            // Apply phrase translation SECOND
-            if (Object.keys(vietPhraseDict).length > 0) {
-                console.log('Applying VP translation...');
-                Object.keys(vietPhraseDict).forEach(chinesePhrase => {
-                    const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                    const regex = new RegExp(chinesePhrase, 'g');
-                    const matches = translatedText.match(regex);
-                    if (matches) {
-                        console.log(`Replacing "${chinesePhrase}" with "${vietnamesePhrase}" - found ${matches.length} matches`);
-                        translatedText = translatedText.replace(regex, vietnamesePhrase);
-                    }
-                });
-            }
-
-            console.log('Translation completed');
-            return translatedText;
-        }');
-                            const regex = new RegExp(escapedPhrase, 'g');
-                            const beforeText = translatedText;
+                            var regex = new RegExp(chinesePhrase, 'g');
+                            var beforeText = translatedText;
                             translatedText = translatedText.replace(regex, vietnamesePhrase);
                             
                             if (beforeText !== translatedText) {
-                                console.log(`✓ Replaced "${chinesePhrase}" with "${vietnamesePhrase}"`);
+                                console.log('✓ Replaced "' + chinesePhrase + '" with "' + vietnamesePhrase + '"');
                             }
                         } catch (regexError) {
-                            console.error(`Regex error for "${chinesePhrase}":`, regexError);
+                            console.error('Regex error for "' + chinesePhrase + '":', regexError);
                             // Fallback to simple replace
-                            translatedText = translatedText.replaceAll(chinesePhrase, vietnamesePhrase);
+                            translatedText = translatedText.split(chinesePhrase).join(vietnamesePhrase);
                         }
+                    }
+                }
+
+                // Step 3: Apply Hán Việt pronunciation for remaining Chinese characters
+                if (Object.keys(pinyinDict).length > 0) {
+                    console.log('Applying Hán Việt for untranslated characters...');
+                    var pinyinKeys = Object.keys(pinyinDict);
+                    var hanVietApplied = 0;
+                    
+                    for (var k = 0; k < pinyinKeys.length; k++) {
+                        var chineseChar = pinyinKeys[k];
+                        var hanViet = pinyinDict[chineseChar];
+                        
+                        // Check if this character exists in the text and hasn't been translated
+                        if (translatedText.includes(chineseChar)) {
+                            try {
+                                var regex = new RegExp(chineseChar, 'g');
+                                var beforeText = translatedText;
+                                translatedText = translatedText.replace(regex, hanViet);
+                                
+                                if (beforeText !== translatedText) {
+                                    console.log('✓ Applied Hán Việt "' + chineseChar + '" → "' + hanViet + '"');
+                                    hanVietApplied++;
+                                }
+                            } catch (regexError) {
+                                console.error('Regex error for Hán Việt "' + chineseChar + '":', regexError);
+                                // Fallback to simple replace
+                                translatedText = translatedText.split(chineseChar).join(hanViet);
+                                hanVietApplied++;
+                            }
+                        }
+                    }
+                    
+                    if (hanVietApplied > 0) {
+                        console.log('✓ Applied Hán Việt to ' + hanVietApplied + ' characters');
                     }
                 }
 
@@ -935,44 +945,10 @@
             }
         }
 
-        function highlightNames() {
-            if (Object.keys(namesDict).length === 0) {
-                alert('Chưa có dữ liệu tên nhân vật. Vui lòng tải file tên nhân vật trước!');
-                return;
-            }
-            
-            const content = document.getElementById('chapterContent');
-            let text = content.textContent;
-            
-            Object.keys(namesDict).forEach(name => {
-                const regex = new RegExp(`(${name})`, 'g');
-                text = text.replace(regex, '<span class="char-highlight">$1</span>');
-            });
-
-            content.innerHTML = text;
-        }
-
-        function showPinyin() {
-            if (Object.keys(pinyinDict).length === 0) {
-                alert('Chưa có dữ liệu phiên âm. Vui lòng tải file phiên âm trước!');
-                return;
-            }
-            
-            const content = document.getElementById('chapterContent');
-            let text = content.textContent;
-            
-            Object.keys(pinyinDict).forEach(char => {
-                const pinyin = pinyinDict[char];
-                const regex = new RegExp(`(${char})`, 'g');
-                text = text.replace(regex, `<span title="${pinyin}" class="char-highlight">$1</span>`);
-            });
-
-            content.innerHTML = text;
-        }
-
+        // Add Name Mode functions
         function toggleAddNameMode() {
             addNameMode = !addNameMode;
-            const reader = document.querySelector('.reader');
+            var reader = document.querySelector('.reader');
             
             if (addNameMode) {
                 reader.classList.add('add-name-mode');
@@ -986,19 +962,19 @@
         }
 
         function setupTextSelection() {
-            const contentElement = document.getElementById('chapterContent');
+            var contentElement = document.getElementById('chapterContent');
             contentElement.addEventListener('mouseup', handleTextSelection);
         }
 
         function removeTextSelection() {
-            const contentElement = document.getElementById('chapterContent');
+            var contentElement = document.getElementById('chapterContent');
             contentElement.removeEventListener('mouseup', handleTextSelection);
             closeAddNamePopup();
         }
 
         function handleTextSelection(event) {
-            const selection = window.getSelection();
-            const text = selection.toString().trim();
+            var selection = window.getSelection();
+            var text = selection.toString().trim();
             
             if (text.length > 0 && text.length <= 10) { // Reasonable name length
                 selectedText = text;
@@ -1011,15 +987,13 @@
             
             addNamePopup = document.createElement('div');
             addNamePopup.className = 'add-name-popup';
-            addNamePopup.innerHTML = `
-                <div><strong>Thêm tên nhân vật</strong></div>
-                <div>Tên Trung: <strong>${selectedText}</strong></div>
-                <input type="text" id="newNameViet" placeholder="Nhập tên tiếng Việt..." />
-                <div>
-                    <button class="save-btn" onclick="saveNewName()">💾 Lưu</button>
-                    <button class="cancel-btn" onclick="closeAddNamePopup()">❌ Hủy</button>
-                </div>
-            `;
+            addNamePopup.innerHTML = '<div><strong>Thêm tên nhân vật</strong></div>' +
+                '<div>Tên Trung: <strong>' + selectedText + '</strong></div>' +
+                '<input type="text" id="newNameViet" placeholder="Nhập tên tiếng Việt..." />' +
+                '<div>' +
+                '<button class="save-btn" onclick="saveNewName()">💾 Lưu</button>' +
+                '<button class="cancel-btn" onclick="closeAddNamePopup()">❌ Hủy</button>' +
+                '</div>';
             
             // Position popup
             addNamePopup.style.left = Math.min(x, window.innerWidth - 270) + 'px';
@@ -1028,13 +1002,13 @@
             document.body.appendChild(addNamePopup);
             
             // Focus input
-            setTimeout(() => {
+            setTimeout(function() {
                 document.getElementById('newNameViet').focus();
             }, 100);
         }
 
         function saveNewName() {
-            const vietName = document.getElementById('newNameViet').value.trim();
+            var vietName = document.getElementById('newNameViet').value.trim();
             
             if (!vietName) {
                 alert('Vui lòng nhập tên tiếng Việt!');
@@ -1043,9 +1017,9 @@
             
             // Add to namesDict
             namesDict[selectedText] = vietName;
-            console.log(`Added new name: ${selectedText} = ${vietName}`);
+            console.log('Added new name: ' + selectedText + ' = ' + vietName);
             
-            alert(`✅ Đã thêm: ${selectedText} → ${vietName}`);
+            alert('✅ Đã thêm: ' + selectedText + ' → ' + vietName);
             
             // Update display if translation is enabled
             if (translationEnabled) {
@@ -1062,12 +1036,55 @@
                 addNamePopup = null;
             }
         }
+
+        function highlightNames() {
+            if (Object.keys(namesDict).length === 0) {
+                alert('Chưa có dữ liệu tên nhân vật. Vui lòng tải file tên nhân vật trước!');
+                return;
+            }
+            
+            var content = document.getElementById('chapterContent');
+            var text = content.textContent;
+            
+            var nameKeys = Object.keys(namesDict);
+            for (var i = 0; i < nameKeys.length; i++) {
+                var name = nameKeys[i];
+                var regex = new RegExp('(' + name + ')', 'g');
+                text = text.replace(regex, '<span class="char-highlight">$1</span>');
+            }
+
+            content.innerHTML = text;
+        }
+
+        function showPinyin() {
+            if (Object.keys(pinyinDict).length === 0) {
+                alert('Chưa có dữ liệu âm Hán Việt. Vui lòng tải file âm Hán Việt trước!');
+                return;
+            }
+            
+            var content = document.getElementById('chapterContent');
+            var text = content.textContent;
+            
+            var pinyinKeys = Object.keys(pinyinDict);
+            for (var i = 0; i < pinyinKeys.length; i++) {
+                var char = pinyinKeys[i];
+                var hanViet = pinyinDict[char];
+                var regex = new RegExp('(' + char + ')', 'g');
+                text = text.replace(regex, '<span title="' + hanViet + '" class="char-highlight">$1</span>');
+            }
+
+            content.innerHTML = text;
+        }
+
+        // Name editor functions
         function openNameEditor() {
-            const textarea = document.getElementById('nameTextarea');
-            let content = '';
-            Object.keys(namesDict).forEach(key => {
-                content += `${key}=${namesDict[key]}\n`;
-            });
+            var textarea = document.getElementById('nameTextarea');
+            var content = '';
+            var nameKeys = Object.keys(namesDict);
+            for (var i = 0; i < nameKeys.length; i++) {
+                var key = nameKeys[i];
+                content += key + '=' + namesDict[key] + '\n';
+            }
             textarea.value = content;
             document.getElementById('nameModal').style.display = 'block';
         }
@@ -1077,7 +1094,7 @@
         }
 
         function saveNames() {
-            const content = document.getElementById('nameTextarea').value;
+            var content = document.getElementById('nameTextarea').value;
             parseNamesFile(content);
             closeNameEditor();
             if (translationEnabled && chapters.length > 0) {
@@ -1089,23 +1106,23 @@
         function updateProgress() {
             if (chapters.length === 0) return;
 
-            const progress = ((currentChapter + 1) / chapters.length) * 100;
-            document.getElementById('progressBar').style.width = `${progress}%`;
+            var progress = ((currentChapter + 1) / chapters.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
             document.getElementById('progressText').textContent = 
-                `Chương ${currentChapter + 1}/${chapters.length} (${Math.round(progress)}%)`;
+                'Chương ' + (currentChapter + 1) + '/' + chapters.length + ' (' + Math.round(progress) + '%)';
         }
 
         function exportSettings() {
-            const settings = {
-                namesDict,
-                vietPhraseDict,
-                pinyinDict,
-                translationEnabled
+            var settings = {
+                namesDict: namesDict,
+                vietPhraseDict: vietPhraseDict,
+                pinyinDict: pinyinDict,
+                translationEnabled: translationEnabled
             };
             
-            const blob = new Blob([JSON.stringify(settings, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            var blob = new Blob([JSON.stringify(settings, null, 2)], {type: 'application/json'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
             a.href = url;
             a.download = 'chinese-reader-settings.json';
             document.body.appendChild(a);
@@ -1115,17 +1132,17 @@
         }
 
         function importSettings() {
-            const input = document.createElement('input');
+            var input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
             input.onchange = function(e) {
-                const file = e.target.files[0];
+                var file = e.target.files[0];
                 if (!file) return;
                 
-                const reader = new FileReader();
+                var reader = new FileReader();
                 reader.onload = function(e) {
                     try {
-                        const settings = JSON.parse(e.target.result);
+                        var settings = JSON.parse(e.target.result);
                         namesDict = settings.namesDict || {};
                         vietPhraseDict = settings.vietPhraseDict || {};
                         pinyinDict = settings.pinyinDict || {};
@@ -1157,7 +1174,7 @@
                 
                 // Reset UI
                 document.getElementById('tocList').innerHTML = 'Vui lòng chọn file truyện để bắt đầu';
-                document.getElementById('chapterContent').innerHTML = 'Đang chờ bạn tải file truyện...<br><br><strong>Hướng dẫn:</strong><br>1. Chọn file truyện (.txt) tiếng Trung<br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, phiên âm)<br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.';
+                document.getElementById('chapterContent').innerHTML = 'Đang chờ bạn tải file truyện...<br><br><strong>Hướng dẫn:</strong><br>1. Chọn file truyện (.txt) tiếng Trung<br>2. Tùy chọn: Tải các file dịch thuật (tên nhân vật, VP, âm Hán Việt)<br>3. Truyện sẽ tự động chia chương theo các dấu hiệu như "第一章", "Chapter", v.v.';
                 document.getElementById('chapterTitle').textContent = 'Chọn chương để đọc';
                 document.getElementById('progressText').textContent = 'Chưa có truyện';
                 document.getElementById('progressBar').style.width = '0%';
@@ -1183,7 +1200,7 @@
 
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('nameModal');
+            var modal = document.getElementById('nameModal');
             if (event.target === modal) {
                 closeNameEditor();
             }

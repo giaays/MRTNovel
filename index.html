@@ -1323,7 +1323,8 @@
                 const vietnameseName = namesDict[chineseName];
                 const escapedName = chineseName.replace(/[.*+?^${}()|[\]\\]/g, '\\            reader.rea');
                 const regex = new RegExp(escapedName, 'g');
-                translatedText = translatedText.replace(regex, vietnameseName);
+                // Thêm space trước và sau mỗi từ đã dịch
+               translatedText = translatedText.replace(regex, ` ${vietnamesePhrase} `);
             });
 
             Object.keys(vietPhraseDict).forEach(chinesePhrase => {

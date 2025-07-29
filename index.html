@@ -578,15 +578,33 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
+                // Lưu trữ nguyên văn, không xử lý gì
                 currentStory = e.target.result;
+                console.log('File content preview:', currentStory.substring(0, 200));
+                console.log('Line breaks detected:', currentStory.match(/\n/g)?.length || 0);
                 parseStory();
                 saveSettings();
             };
-            reader.readAsText(file, 'UTF-8');
+            
+            // Thử nhiều encoding khác nhau
+            try {
+                reader.readAsText(file, 'UTF-8');
+            } catch (error) {
+                console.error('UTF-8 failed, trying other encodings');
+                try {
+                    reader.readAsText(file, 'GB2312');
+                } catch (error2) {
+                    reader.readAsText(file);
+                }
+            }
         }
 
         function parseStory() {
             if (!currentStory) return;
+
+            console.log('Original story length:', currentStory.length);
+            console.log('Line breaks in original:', (currentStory.match(/\n/g) || []).length);
+            console.log('First 300 chars:', currentStory.substring(0, 300));
 
             // Chapter detection patterns
             const chapterPatterns = [
@@ -622,22 +640,27 @@
             for (let i = 0; i < uniqueMatches.length; i++) {
                 const start = uniqueMatches[i].index;
                 const end = i < uniqueMatches.length - 1 ? uniqueMatches[i + 1].index : currentStory.length;
-                const content = currentStory.substring(start, end).trim();
+                // KHÔNG trim() để giữ nguyên xuống dòng
+                const content = currentStory.substring(start, end);
                 
                 chapters.push({
                     title: uniqueMatches[i].title,
-                    content: content,
+                    content: content, // Giữ nguyên hoàn toàn
                     index: i
                 });
+                
+                console.log(`Chapter ${i + 1} content preview:`, content.substring(0, 100));
+                console.log(`Chapter ${i + 1} line breaks:`, (content.match(/\n/g) || []).length);
             }
 
             // If no chapters found, create one big chapter
             if (chapters.length === 0) {
                 chapters.push({
                     title: 'Toàn bộ truyện',
-                    content: currentStory,
+                    content: currentStory, // Giữ nguyên hoàn toàn
                     index: 0
                 });
+                console.log('Single chapter created with line breaks:', (currentStory.match(/\n/g) || []).length);
             }
 
             renderTOC();
@@ -945,41 +968,84 @@
         }
 
         function applyTranslation(text) {
-            // Lưu trữ vị trí xuống dòng trước khi dịch
-            const lineBreaks = [];
-            let tempText = text;
-            let match;
-            const regex = /\n/g;
-            while ((match = regex.exec(text)) !== null) {
-                lineBreaks.push(match.index);
-            }
-
             let translatedText = text;
 
-            // Normalize punctuation first (trước khi dịch)
+            // Normalize punctuation first
             translatedText = normalizeVietnamesePunctuation(translatedText);
 
-            // Apply names translation với boundary
-            if (Object.keys(namesDict).length > 0) {
-                const sortedNames = Object.keys(namesDict).sort((a, b) => b.length - a.length);
-                sortedNames.forEach(chineseName => {
-                    const vietnameseName = namesDict[chineseName];
-                    const regex = new RegExp(escapeRegExp(chineseName), 'g');
-                    translatedText = translatedText.replace(regex, ' ' + vietnameseName + ' ');
-                });
-            }
+            // Tạo danh sách tất cả các từ cần dịch với độ ưu tiên
+            let translationList = [];
 
-            // Apply phrase translation với boundary
-            if (Object.keys(vietPhraseDict).length > 0) {
-                const sortedPhrases = Object.keys(vietPhraseDict).sort((a, b) => b.length - a.length);
-                sortedPhrases.forEach(chinesePhrase => {
-                    const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                    const regex = new RegExp(escapeRegExp(chinesePhrase), 'g');
-                    translatedText = translatedText.replace(regex, ' ' + vietnamesePhrase + ' ');
+            // Thu thập names
+            Object.keys(namesDict).forEach(key => {
+                translationList.push({
+                    original: key,
+                    translation: namesDict[key],
+                    length: key.length,
+                    type: 'name'
                 });
-            }
+            });
 
-            // Apply phonetic translation for remaining Chinese characters
+            // Thu thập Vietnamese phrases
+            Object.keys(vietPhraseDict).forEach(key => {
+                translationList.push({
+                    original: key,
+                    translation: vietPhraseDict[key],
+                    length: key.length,
+                    type: 'phrase'
+                });
+            });
+
+            // Sắp xếp theo thứ tự ưu tiên:
+            // 1. VP từ 4 chữ trở lên (dài nhất trước)
+            // 2. Names 2-3 chữ (dài nhất trước) 
+            // 3. Names 1 chữ
+            // 4. VP 1-3 chữ (dài nhất trước)
+            translationList.sort((a, b) => {
+                // VP từ 4 chữ trở lên có ưu tiên cao nhất
+                if (a.type === 'phrase' && a.length >= 4 && b.type === 'phrase' && b.length >= 4) {
+                    return b.length - a.length; // Dài hơn trước
+                }
+                if (a.type === 'phrase' && a.length >= 4) return -1;
+                if (b.type === 'phrase' && b.length >= 4) return 1;
+
+                // Names 2-3 chữ ưu tiên thứ 2
+                if (a.type === 'name' && a.length >= 2 && a.length <= 3 && 
+                    b.type === 'name' && b.length >= 2 && b.length <= 3) {
+                    return b.length - a.length; // Dài hơn trước
+                }
+                if (a.type === 'name' && a.length >= 2 && a.length <= 3) return -1;
+                if (b.type === 'name' && b.length >= 2 && b.length <= 3) return 1;
+
+                // Names 1 chữ ưu tiên thứ 3
+                if (a.type === 'name' && a.length === 1 && b.type === 'name' && b.length === 1) {
+                    return 0; // Thứ tự bất kỳ
+                }
+                if (a.type === 'name' && a.length === 1) return -1;
+                if (b.type === 'name' && b.length === 1) return 1;
+
+                // VP 1-3 chữ ưu tiên cuối
+                if (a.type === 'phrase' && a.length <= 3 && b.type === 'phrase' && b.length <= 3) {
+                    return b.length - a.length; // Dài hơn trước
+                }
+                if (a.type === 'phrase' && a.length <= 3) return -1;
+                if (b.type === 'phrase' && b.length <= 3) return 1;
+
+                // Fallback: dài hơn trước
+                return b.length - a.length;
+            });
+
+            console.log('Translation priority order:', translationList.map(item => 
+                `${item.original}(${item.length}${item.type[0]}) -> ${item.translation}`
+            ));
+
+            // Áp dụng dịch theo thứ tự ưu tiên (từ trái sang phải)
+            translationList.forEach(item => {
+                const regex = new RegExp(escapeRegExp(item.original), 'g');
+                translatedText = translatedText.replace(regex, ' ' + item.translation + ' ');
+            });
+
+            // Apply phonetic translation cho các ký tự còn lại
             if (Object.keys(pinyinDict).length > 0) {
                 translatedText = translatedText.replace(/[\u4e00-\u9fff]+/g, function(match) {
                     let result = ' ';
@@ -998,11 +1064,11 @@
             }
 
             // Làm sạch khoảng trắng thừa
-            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Nhiều space thành 1
+            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); 
             
             // Xử lý dấu câu đặc biệt
-            translatedText = translatedText.replace(/[ \t]*:[ \t]*"/g, ': "'); // : "abc" không phải :" abc"
-            translatedText = translatedText.replace(/[ \t]*:[ \t]*'/g, ": '"); // Tương tự với dấu nháy đơn
+            translatedText = translatedText.replace(/[ \t]*:[ \t]*"/g, ': "');
+            translatedText = translatedText.replace(/[ \t]*:[ \t]*'/g, ": '");
             
             // Xóa space trước dấu câu thông thường
             translatedText = translatedText.replace(/[ \t]+([,.;!?)"'\]})>》」』】])/g, '$1');

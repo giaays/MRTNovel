@@ -671,8 +671,22 @@
                 content = applyTranslation(content);
             }
 
-            // Giữ nguyên format xuống dòng từ văn bản gốc
-            document.getElementById('chapterContent').innerHTML = content.replace(/\n/g, '<br>');
+            // Giữ nguyên format xuống dòng từ văn bản gốc và xử lý đoạn văn
+            const contentElement = document.getElementById('chapterContent');
+            contentElement.innerHTML = '';
+            
+            // Tách nội dung thành các đoạn
+            const paragraphs = content.split(/\n\s*\n/); // Tách theo dòng trống
+            
+            paragraphs.forEach(paragraph => {
+                if (paragraph.trim()) {
+                    const p = document.createElement('p');
+                    p.innerHTML = paragraph.trim().replace(/\n/g, '<br>');
+                    p.style.marginBottom = '15px';
+                    p.style.textIndent = '2em'; // Thụt đầu dòng
+                    contentElement.appendChild(p);
+                }
+            });
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -884,6 +898,11 @@
             text = text.replace(/》/g, '"');
             text = text.replace(/—/g, '—');
             text = text.replace(/…/g, '...');
+            text = text.replace(/、/g, ', '); // Dấu phẩy Trung Quốc
+            text = text.replace(/「/g, '"');
+            text = text.replace(/」/g, '"');
+            text = text.replace(/『/g, '"');
+            text = text.replace(/』/g, '"');
             
             return text;
         }
@@ -891,11 +910,14 @@
         function applyTranslation(text) {
             let translatedText = text;
 
+            // Normalize punctuation first (trước khi dịch)
+            translatedText = normalizeVietnamesePunctuation(translatedText);
+
             // Apply names translation first (tối ưu bằng cách sắp xếp theo độ dài giảm dần)
             const sortedNames = Object.keys(namesDict).sort((a, b) => b.length - a.length);
             sortedNames.forEach(chineseName => {
                 const vietnameseName = namesDict[chineseName];
-                const regex = new RegExp(escapeRegExp(chineseName), 'g');
+                const regex = new RegExp(escapeRegExp(chineseName) + '(?![a-zA-Z0-9])', 'g');
                 translatedText = translatedText.replace(regex, vietnameseName);
             });
 
@@ -903,7 +925,7 @@
             const sortedPhrases = Object.keys(vietPhraseDict).sort((a, b) => b.length - a.length);
             sortedPhrases.forEach(chinesePhrase => {
                 const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                const regex = new RegExp(escapeRegExp(chinesePhrase), 'g');
+                const regex = new RegExp(escapeRegExp(chinesePhrase) + '(?![a-zA-Z0-9])', 'g');
                 translatedText = translatedText.replace(regex, vietnamesePhrase);
             });
 
@@ -913,7 +935,6 @@
                 for (let i = 0; i < match.length; i++) {
                     const char = match[i];
                     if (pinyinDict[char]) {
-                        // Thêm khoảng trắng trước mỗi từ phiên âm (trừ từ đầu tiên trong cụm)
                         if (i > 0) {
                             result += ' ';
                         }
@@ -925,12 +946,13 @@
                 return result;
             });
 
-            // Normalize punctuation 
-            translatedText = normalizeVietnamesePunctuation(translatedText);
+            // Thêm khoảng trắng sau từ được dịch (trừ khi sau nó là dấu câu)
+            translatedText = translatedText.replace(/([a-zA-Záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ]+)(?=[a-zA-Záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ\u4e00-\u9fff])/g, '$1 ');
             
             // Làm sạch khoảng trắng thừa nhưng giữ nguyên xuống dòng
             translatedText = translatedText.replace(/[ \t]+/g, ' '); // Chỉ thay thế space và tab
-            translatedText = translatedText.replace(/^\s+|\s+$/gm, ''); // Xóa space đầu/cuối mỗi dòng
+            translatedText = translatedText.replace(/^ +| +$/gm, ''); // Xóa space đầu/cuối mỗi dòng
+            translatedText = translatedText.replace(/ +([,.;:!?)])/g, '$1'); // Xóa space trước dấu câu
             
             // Apply capitalization
             translatedText = capitalizeVietnamese(translatedText);

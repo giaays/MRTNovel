@@ -696,26 +696,21 @@
                 contentElement.innerHTML = '<div class="loading"><div class="spinner"></div>Đang dịch chương...</div>';
                 await new Promise(resolve => setTimeout(resolve, 10));
                 content = applyTranslation(content);
-                console.log('After translation line breaks:', (content.match(/\n/g) || []).length);
             }
 
-            // Chia thành các đoạn theo dòng trống thực sự
-            const paragraphs = content.split(/\n\n+/); // 2 hoặc nhiều \n = dòng trống
-            
-            contentElement.innerHTML = '';
-            
-            paragraphs.forEach((paragraph, index) => {
-                if (paragraph.trim()) {
-                    const p = document.createElement('p');
-                    // Thay \n đơn lẻ thành <br> trong đoạn
-                    p.innerHTML = paragraph.trim().replace(/\n/g, '<br>');
-                    p.style.marginBottom = index < paragraphs.length - 1 ? '1.5em' : '0';
-                    p.style.lineHeight = '1.8';
-                    p.style.textAlign = 'justify';
-                    p.style.textIndent = '2em';
-                    contentElement.appendChild(p);
-                }
-            });
+            // Sử dụng pre với styling để giữ nguyên format và có thể thụt đầu dòng
+            contentElement.innerHTML = `
+                <div style="
+                    font-family: 'Times New Roman', serif; 
+                    font-size: 16px;
+                    line-height: 1.9; 
+                    text-align: justify;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                    white-space: pre-line;
+                    text-indent: 0;
+                ">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            `;
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -890,23 +885,23 @@
 
         function capitalizeVietnamese(text) {
             // Viết hoa ký tự đầu tiên của văn bản
-            text = text.replace(/^([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/i, function(match) {
-                return match.toUpperCase();
+            text = text.replace(/^(\s*)([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/i, function(match, space, letter) {
+                return space + letter.toUpperCase();
             });
             
-            // Viết hoa sau dấu câu kết thúc câu và có khoảng trắng hoặc xuống dòng
-            text = text.replace(/([.!?])\s*([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
-                return p1 + ' ' + p2.toUpperCase();
+            // Viết hoa sau dấu câu kết thúc câu (.!?)
+            text = text.replace(/([.!?])\s+([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôố�ồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, punct, letter) {
+                return punct + ' ' + letter.toUpperCase();
             });
             
-            // Viết hoa sau dấu nháy kép mở - CẢI THIỆN
-            text = text.replace(/(["""])([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
-                return p1 + p2.toUpperCase();
+            // Viết hoa sau dấu nháy kép mở
+            text = text.replace(/(["""])([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, quote, letter) {
+                return quote + letter.toUpperCase();
             });
             
-            // Viết hoa đầu dòng mới (sau \n) - CẢI THIỆN  
-            text = text.replace(/(\n)([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
-                return p1 + p2.toUpperCase();
+            // Viết hoa đầu mỗi dòng (sau \n)
+            text = text.replace(/(\n)(\s*)([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữự ýỳỷỹỵđ])/gi, function(match, newline, space, letter) {
+                return newline + space + letter.toUpperCase();
             });
             
             return text;
@@ -937,6 +932,23 @@
             text = text.replace(/」/g, '"');
             text = text.replace(/『/g, '"');
             text = text.replace(/』/g, '"');
+            
+            // Sửa dấu câu đúng chính tả tiếng Việt
+            // Xóa khoảng trắng trước dấu câu
+            text = text.replace(/\s+([,.;:!?])/g, '$1');
+            
+            // Thêm khoảng trắng sau dấu câu (trừ cuối câu)
+            text = text.replace(/([,.;:])\s*/g, '$1 ');
+            text = text.replace(/([.!?])\s*/g, '$1 ');
+            
+            // Sửa dấu nháy kép và ngoặc đơn
+            text = text.replace(/\s*"\s*/g, '"');
+            text = text.replace(/\s*'\s*/g, "'");
+            text = text.replace(/\s*\(\s*/g, '(');
+            text = text.replace(/\s*\)\s*/g, ') ');
+            
+            // Xử lý dấu hai chấm + ngoặc kép
+            text = text.replace(/:\s*"/g, ': "');
             
             return text;
         }

@@ -683,67 +683,17 @@
             // Xóa nội dung cũ
             contentElement.innerHTML = '';
             
-            // Chia đoạn theo dòng trống (2 xuống dòng liên tiếp)
-            const paragraphs = content.split(/\n\s*\n+/);
+            // Giữ nguyên format gốc - chỉ thay \n thành <br>
+            const finalContent = content.replace(/\n/g, '<br>');
             
-            // Nếu không có đoạn nào được tách, sử dụng toàn bộ nội dung
-            if (paragraphs.length === 1 && paragraphs[0] === content) {
-                // Chia theo xuống dòng đơn nếu không có dòng trống  
-                const lines = content.split('\n');
-                const groupedParagraphs = [];
-                let currentParagraph = [];
-                
-                lines.forEach(line => {
-                    if (line.trim() === '') {
-                        if (currentParagraph.length > 0) {
-                            groupedParagraphs.push(currentParagraph.join('\n'));
-                            currentParagraph = [];
-                        }
-                    } else {
-                        currentParagraph.push(line);
-                    }
-                });
-                
-                if (currentParagraph.length > 0) {
-                    groupedParagraphs.push(currentParagraph.join('\n'));
-                }
-                
-                // Sử dụng các đoạn đã được nhóm
-                for (let i = 0; i < groupedParagraphs.length; i++) {
-                    const paragraph = groupedParagraphs[i];
-                    if (paragraph.trim()) {
-                        const p = document.createElement('p');
-                        p.innerHTML = paragraph.trim().replace(/\n/g, '<br>');
-                        p.style.marginBottom = '1.5em';
-                        p.style.textIndent = '2em';
-                        p.style.lineHeight = '1.8';
-                        contentElement.appendChild(p);
-                        
-                        // Cho phép UI cập nhật sau mỗi 3 đoạn
-                        if (i % 3 === 0) {
-                            await new Promise(resolve => setTimeout(resolve, 1));
-                        }
-                    }
-                }
-            } else {
-                // Render từng đoạn đã được tách bởi dòng trống
-                for (let i = 0; i < paragraphs.length; i++) {
-                    const paragraph = paragraphs[i];
-                    if (paragraph.trim()) {
-                        const p = document.createElement('p');
-                        p.innerHTML = paragraph.trim().replace(/\n/g, '<br>');
-                        p.style.marginBottom = '1.5em';
-                        p.style.textIndent = '2em';
-                        p.style.lineHeight = '1.8';
-                        contentElement.appendChild(p);
-                        
-                        // Cho phép UI cập nhật sau mỗi 3 đoạn
-                        if (i % 3 === 0) {
-                            await new Promise(resolve => setTimeout(resolve, 1));
-                        }
-                    }
-                }
-            }
+            // Tạo một div chứa toàn bộ nội dung với styling phù hợp
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = finalContent;
+            contentDiv.style.lineHeight = '1.8';
+            contentDiv.style.textAlign = 'justify';
+            contentDiv.style.whiteSpace = 'pre-line'; // Giữ nguyên xuống dòng và wrap text
+            
+            contentElement.appendChild(contentDiv);
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -1010,15 +960,11 @@
                 });
             }
 
-            // Xử lý khoảng trắng giữa các từ tiếng Việt
-            // Thêm khoảng trắng giữa các từ tiếng Việt liền nhau (không có khoảng trắng)
-            translatedText = translatedText.replace(/([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđA-Z]+)([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđA-Z])/g, '$1 $2');
-            
-            // Làm sạch khoảng trắng thừa nhưng giữ nguyên cấu trúc
-            translatedText = translatedText.replace(/[ \t]+/g, ' '); // Nhiều space/tab thành 1 space
-            translatedText = translatedText.replace(/^ +| +$/gm, ''); // Xóa space đầu/cuối dòng
-            translatedText = translatedText.replace(/ +([,.;:!?)"'])/g, '$1'); // Xóa space trước dấu câu
-            translatedText = translatedText.replace(/([("']) +/g, '$1'); // Xóa space sau dấu mở ngoặc/nháy
+            // Chỉ làm sạch khoảng trắng thừa, KHÔNG động đến xuống dòng
+            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Nhiều space/tab liên tiếp thành 1 space
+            translatedText = translatedText.replace(/^[ \t]+|[ \t]+$/gm, ''); // Xóa space/tab đầu cuối dòng
+            translatedText = translatedText.replace(/[ \t]+([,.;:!?)"'\]})>》」』】])/g, '$1'); // Xóa space trước dấu câu đóng
+            translatedText = translatedText.replace(/([("'\[{<《「『【])[ \t]+/g, '$1'); // Xóa space sau dấu câu mở
             
             // Apply capitalization cuối cùng
             translatedText = capitalizeVietnamese(translatedText);

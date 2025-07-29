@@ -706,12 +706,14 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('Names file loaded'); // Debug log
                 parseNamesFile(e.target.result);
                 filesUploaded.names = true;
                 document.getElementById('namesFileStatus').style.display = 'block';
+                console.log('Names file processed, checking all files...'); // Debug log
                 checkAllFilesUploaded();
                 saveSettings();
-                if (translationEnabled) {
+                if (translationEnabled && chapters.length > 0) {
                     loadChapter(currentChapter);
                 }
             };
@@ -724,9 +726,15 @@
             lines.forEach(line => {
                 const parts = line.trim().split('=');
                 if (parts.length === 2) {
-                    namesDict[parts[0].trim()] = parts[1].trim();
+                    const key = parts[0].trim();
+                    // Lấy giá trị đầu tiên trước dấu / hoặc |
+                    const value = parts[1].trim().split(/[\/|]/)[0].trim();
+                    if (key && value) {
+                        namesDict[key] = value;
+                    }
                 }
             });
+            console.log('Names dictionary loaded:', Object.keys(namesDict).length, 'entries'); // Debug log
         }
 
         function handleVietPhraseFile(event) {
@@ -735,12 +743,14 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('Viet phrase file loaded'); // Debug log
                 parseVietPhraseFile(e.target.result);
                 filesUploaded.vietPhrase = true;
                 document.getElementById('vietPhraseFileStatus').style.display = 'block';
+                console.log('Viet phrase file processed, checking all files...'); // Debug log
                 checkAllFilesUploaded();
                 saveSettings();
-                if (translationEnabled) {
+                if (translationEnabled && chapters.length > 0) {
                     loadChapter(currentChapter);
                 }
             };
@@ -753,9 +763,15 @@
             lines.forEach(line => {
                 const parts = line.trim().split('=');
                 if (parts.length === 2) {
-                    vietPhraseDict[parts[0].trim()] = parts[1].trim();
+                    const key = parts[0].trim();
+                    // Lấy giá trị đầu tiên trước dấu / hoặc |
+                    const value = parts[1].trim().split(/[\/|]/)[0].trim();
+                    if (key && value) {
+                        vietPhraseDict[key] = value;
+                    }
                 }
             });
+            console.log('Viet phrase dictionary loaded:', Object.keys(vietPhraseDict).length, 'entries'); // Debug log
         }
 
         function handlePinyinFile(event) {
@@ -764,9 +780,11 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('Pinyin file loaded'); // Debug log
                 parsePinyinFile(e.target.result);
                 filesUploaded.pinyin = true;
                 document.getElementById('pinyinFileStatus').style.display = 'block';
+                console.log('Pinyin file processed, checking all files...'); // Debug log
                 checkAllFilesUploaded();
                 saveSettings();
             };
@@ -779,22 +797,37 @@
             lines.forEach(line => {
                 const parts = line.trim().split('=');
                 if (parts.length === 2) {
-                    pinyinDict[parts[0].trim()] = parts[1].trim();
+                    const key = parts[0].trim();
+                    // Lấy giá trị đầu tiên trước dấu / hoặc |
+                    const value = parts[1].trim().split(/[\/|]/)[0].trim();
+                    if (key && value) {
+                        pinyinDict[key] = value;
+                    }
                 }
             });
+            console.log('Pinyin dictionary loaded:', Object.keys(pinyinDict).length, 'entries'); // Debug log
         }
 
         function checkAllFilesUploaded() {
+            console.log('Checking files:', filesUploaded); // Debug log
             if (filesUploaded.names && filesUploaded.vietPhrase && filesUploaded.pinyin) {
                 document.getElementById('translationToggle').classList.add('show');
+                console.log('All files uploaded, showing toggle'); // Debug log
+            } else {
+                console.log('Not all files uploaded yet'); // Debug log
             }
         }
 
         function toggleTranslation() {
+            console.log('Toggle clicked, current state:', translationEnabled); // Debug log
             translationEnabled = !translationEnabled;
             const toggleSwitch = document.getElementById('toggleSwitch');
             toggleSwitch.classList.toggle('active', translationEnabled);
-            loadChapter(currentChapter);
+            console.log('New translation state:', translationEnabled); // Debug log
+            
+            if (chapters.length > 0) {
+                loadChapter(currentChapter);
+            }
             saveSettings();
         }
 

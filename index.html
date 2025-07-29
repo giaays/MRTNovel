@@ -670,20 +670,55 @@
             const contentElement = document.getElementById('chapterContent');
             
             if (translationEnabled) {
-                // Hiển thị loading ngay lập tức
                 contentElement.innerHTML = '<div class="loading"><div class="spinner"></div>Đang dịch chương...</div>';
-                
-                // Sử dụng setTimeout để cho phép UI cập nhật trước khi dịch
                 await new Promise(resolve => setTimeout(resolve, 10));
-                
-                // Dịch nội dung
                 content = applyTranslation(content);
             }
 
-            // Hiển thị nội dung với format gốc được bảo toàn hoàn toàn
-            contentElement.innerHTML = '<pre style="font-family: Arial, sans-serif; line-height: 1.8; white-space: pre-wrap; margin: 0; text-align: justify;">' + 
-                content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + 
-                '</pre>';
+            // Tạo các đoạn văn dựa trên xuống dòng trong file gốc
+            const lines = content.split('\n');
+            contentElement.innerHTML = '';
+            
+            let currentParagraph = '';
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                if (line === '') {
+                    // Dòng trống - kết thúc đoạn hiện tại nếu có
+                    if (currentParagraph.trim()) {
+                        const p = document.createElement('p');
+                        p.innerHTML = currentParagraph.trim();
+                        p.style.marginBottom = '1em';
+                        p.style.lineHeight = '1.8';
+                        p.style.textAlign = 'justify';
+                        p.style.textIndent = '2em';
+                        contentElement.appendChild(p);
+                        currentParagraph = '';
+                    }
+                    // Thêm khoảng trống giữa các đoạn
+                    const br = document.createElement('br');
+                    contentElement.appendChild(br);
+                } else {
+                    // Dòng có nội dung - thêm vào đoạn hiện tại
+                    if (currentParagraph) {
+                        currentParagraph += ' ' + line;
+                    } else {
+                        currentParagraph = line;
+                    }
+                }
+            }
+            
+            // Xử lý đoạn cuối cùng nếu còn
+            if (currentParagraph.trim()) {
+                const p = document.createElement('p');
+                p.innerHTML = currentParagraph.trim();
+                p.style.marginBottom = '1em';
+                p.style.lineHeight = '1.8';
+                p.style.textAlign = 'justify';
+                p.style.textIndent = '2em';
+                contentElement.appendChild(p);
+            }
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -910,6 +945,15 @@
         }
 
         function applyTranslation(text) {
+            // Lưu trữ vị trí xuống dòng trước khi dịch
+            const lineBreaks = [];
+            let tempText = text;
+            let match;
+            const regex = /\n/g;
+            while ((match = regex.exec(text)) !== null) {
+                lineBreaks.push(match.index);
+            }
+
             let translatedText = text;
 
             // Normalize punctuation first (trước khi dịch)
@@ -920,7 +964,6 @@
                 const sortedNames = Object.keys(namesDict).sort((a, b) => b.length - a.length);
                 sortedNames.forEach(chineseName => {
                     const vietnameseName = namesDict[chineseName];
-                    // Sử dụng regex để thêm boundary và space
                     const regex = new RegExp(escapeRegExp(chineseName), 'g');
                     translatedText = translatedText.replace(regex, ' ' + vietnameseName + ' ');
                 });
@@ -939,7 +982,7 @@
             // Apply phonetic translation for remaining Chinese characters
             if (Object.keys(pinyinDict).length > 0) {
                 translatedText = translatedText.replace(/[\u4e00-\u9fff]+/g, function(match) {
-                    let result = ' '; // Bắt đầu với space
+                    let result = ' ';
                     for (let i = 0; i < match.length; i++) {
                         const char = match[i];
                         if (pinyinDict[char]) {
@@ -949,21 +992,27 @@
                             result += char;
                         }
                     }
-                    result += ' '; // Kết thúc với space
+                    result += ' ';
                     return result;
                 });
             }
 
-            // Làm sạch khoảng trắng thừa NHƯNG TUYỆT ĐỐI KHÔNG ĐỤng ĐẾN \n
-            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Chỉ xử lý space và tab
+            // Làm sạch khoảng trắng thừa
+            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Nhiều space thành 1
             
-            // Xóa space trước dấu câu và sau dấu mở
-            translatedText = translatedText.replace(/[ \t]+([,.;:!?)"'\]})>》」』】])/g, '$1');
+            // Xử lý dấu câu đặc biệt
+            translatedText = translatedText.replace(/[ \t]*:[ \t]*"/g, ': "'); // : "abc" không phải :" abc"
+            translatedText = translatedText.replace(/[ \t]*:[ \t]*'/g, ": '"); // Tương tự với dấu nháy đơn
+            
+            // Xóa space trước dấu câu thông thường
+            translatedText = translatedText.replace(/[ \t]+([,.;!?)"'\]})>》」』】])/g, '$1');
+            
+            // Xóa space sau dấu mở ngoặc/nháy
             translatedText = translatedText.replace(/([("'\[{<《「『【])[ \t]+/g, '$1');
             
-            // Chỉ xóa space/tab đầu cuối dòng, KHÔNG đụng đến \n
-            translatedText = translatedText.replace(/[ \t]+$/gm, ''); // Xóa space cuối dòng
-            translatedText = translatedText.replace(/^[ \t]+/gm, ''); // Xóa space đầu dòng
+            // Xóa space thừa đầu cuối dòng
+            translatedText = translatedText.replace(/[ \t]+$/gm, '');
+            translatedText = translatedText.replace(/^[ \t]+/gm, '');
             
             // Apply capitalization
             translatedText = capitalizeVietnamese(translatedText);

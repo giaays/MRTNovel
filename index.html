@@ -680,20 +680,10 @@
                 content = applyTranslation(content);
             }
 
-            // Xóa nội dung cũ
-            contentElement.innerHTML = '';
-            
-            // Giữ nguyên format gốc - chỉ thay \n thành <br>
-            const finalContent = content.replace(/\n/g, '<br>');
-            
-            // Tạo một div chứa toàn bộ nội dung với styling phù hợp
-            const contentDiv = document.createElement('div');
-            contentDiv.innerHTML = finalContent;
-            contentDiv.style.lineHeight = '1.8';
-            contentDiv.style.textAlign = 'justify';
-            contentDiv.style.whiteSpace = 'pre-line'; // Giữ nguyên xuống dòng và wrap text
-            
-            contentElement.appendChild(contentDiv);
+            // Hiển thị nội dung với format gốc được bảo toàn hoàn toàn
+            contentElement.innerHTML = '<pre style="font-family: Arial, sans-serif; line-height: 1.8; white-space: pre-wrap; margin: 0; text-align: justify;">' + 
+                content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + 
+                '</pre>';
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -964,16 +954,16 @@
                 });
             }
 
-            // Làm sạch khoảng trắng thừa NHƯNG giữ nguyên các space cần thiết
-            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Nhiều space liên tiếp thành 1
-            translatedText = translatedText.replace(/^[ \t]+|[ \t]+$/gm, ''); // Xóa space đầu cuối dòng
+            // Làm sạch khoảng trắng thừa NHƯNG TUYỆT ĐỐI KHÔNG ĐỤng ĐẾN \n
+            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Chỉ xử lý space và tab
             
             // Xóa space trước dấu câu và sau dấu mở
-            translatedText = translatedText.replace(/\s+([,.;:!?)"'\]})>》」』】])/g, '$1');
-            translatedText = translatedText.replace(/([("'\[{<《「『【])\s+/g, '$1');
+            translatedText = translatedText.replace(/[ \t]+([,.;:!?)"'\]})>》」』】])/g, '$1');
+            translatedText = translatedText.replace(/([("'\[{<《「『【])[ \t]+/g, '$1');
             
-            // Xóa space thừa quanh dấu xuống dòng
-            translatedText = translatedText.replace(/\s*\n\s*/g, '\n');
+            // Chỉ xóa space/tab đầu cuối dòng, KHÔNG đụng đến \n
+            translatedText = translatedText.replace(/[ \t]+$/gm, ''); // Xóa space cuối dòng
+            translatedText = translatedText.replace(/^[ \t]+/gm, ''); // Xóa space đầu dòng
             
             // Apply capitalization
             translatedText = capitalizeVietnamese(translatedText);

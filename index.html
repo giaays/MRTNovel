@@ -696,52 +696,22 @@
                 contentElement.innerHTML = '<div class="loading"><div class="spinner"></div>Đang dịch chương...</div>';
                 await new Promise(resolve => setTimeout(resolve, 10));
                 content = applyTranslation(content);
+                console.log('After translation line breaks:', (content.match(/\n/g) || []).length);
             }
 
-            // Tạo các đoạn văn dựa trên xuống dòng trong file gốc
-            const lines = content.split('\n');
-            contentElement.innerHTML = '';
-            
-            let currentParagraph = '';
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                
-                if (line === '') {
-                    // Dòng trống - kết thúc đoạn hiện tại nếu có
-                    if (currentParagraph.trim()) {
-                        const p = document.createElement('p');
-                        p.innerHTML = currentParagraph.trim();
-                        p.style.marginBottom = '1em';
-                        p.style.lineHeight = '1.8';
-                        p.style.textAlign = 'justify';
-                        p.style.textIndent = '2em';
-                        contentElement.appendChild(p);
-                        currentParagraph = '';
-                    }
-                    // Thêm khoảng trống giữa các đoạn
-                    const br = document.createElement('br');
-                    contentElement.appendChild(br);
-                } else {
-                    // Dòng có nội dung - thêm vào đoạn hiện tại
-                    if (currentParagraph) {
-                        currentParagraph += ' ' + line;
-                    } else {
-                        currentParagraph = line;
-                    }
-                }
-            }
-            
-            // Xử lý đoạn cuối cùng nếu còn
-            if (currentParagraph.trim()) {
-                const p = document.createElement('p');
-                p.innerHTML = currentParagraph.trim();
-                p.style.marginBottom = '1em';
-                p.style.lineHeight = '1.8';
-                p.style.textAlign = 'justify';
-                p.style.textIndent = '2em';
-                contentElement.appendChild(p);
-            }
+            // Sử dụng <pre> để bảo toàn hoàn toàn format gốc
+            contentElement.innerHTML = `
+                <pre style="
+                    font-family: 'Arial', sans-serif; 
+                    font-size: 16px;
+                    line-height: 1.8; 
+                    white-space: pre-wrap; 
+                    margin: 0; 
+                    text-align: justify;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                ">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            `;
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -968,6 +938,9 @@
         }
 
         function applyTranslation(text) {
+            console.log('Before translation line breaks:', (text.match(/\n/g) || []).length);
+            console.log('Input text preview:', text.substring(0, 200));
+            
             let translatedText = text;
 
             // Normalize punctuation first
@@ -996,50 +969,37 @@
                 });
             });
 
-            // Sắp xếp theo thứ tự ưu tiên:
-            // 1. VP từ 4 chữ trở lên (dài nhất trước)
-            // 2. Names 2-3 chữ (dài nhất trước) 
-            // 3. Names 1 chữ
-            // 4. VP 1-3 chữ (dài nhất trước)
+            // Sắp xếp theo thứ tự ưu tiên
             translationList.sort((a, b) => {
-                // VP từ 4 chữ trở lên có ưu tiên cao nhất
                 if (a.type === 'phrase' && a.length >= 4 && b.type === 'phrase' && b.length >= 4) {
-                    return b.length - a.length; // Dài hơn trước
+                    return b.length - a.length;
                 }
                 if (a.type === 'phrase' && a.length >= 4) return -1;
                 if (b.type === 'phrase' && b.length >= 4) return 1;
 
-                // Names 2-3 chữ ưu tiên thứ 2
                 if (a.type === 'name' && a.length >= 2 && a.length <= 3 && 
                     b.type === 'name' && b.length >= 2 && b.length <= 3) {
-                    return b.length - a.length; // Dài hơn trước
+                    return b.length - a.length;
                 }
                 if (a.type === 'name' && a.length >= 2 && a.length <= 3) return -1;
                 if (b.type === 'name' && b.length >= 2 && b.length <= 3) return 1;
 
-                // Names 1 chữ ưu tiên thứ 3
                 if (a.type === 'name' && a.length === 1 && b.type === 'name' && b.length === 1) {
-                    return 0; // Thứ tự bất kỳ
+                    return 0;
                 }
                 if (a.type === 'name' && a.length === 1) return -1;
                 if (b.type === 'name' && b.length === 1) return 1;
 
-                // VP 1-3 chữ ưu tiên cuối
                 if (a.type === 'phrase' && a.length <= 3 && b.type === 'phrase' && b.length <= 3) {
-                    return b.length - a.length; // Dài hơn trước
+                    return b.length - a.length;
                 }
                 if (a.type === 'phrase' && a.length <= 3) return -1;
                 if (b.type === 'phrase' && b.length <= 3) return 1;
 
-                // Fallback: dài hơn trước
                 return b.length - a.length;
             });
 
-            console.log('Translation priority order:', translationList.map(item => 
-                `${item.original}(${item.length}${item.type[0]}) -> ${item.translation}`
-            ));
-
-            // Áp dụng dịch theo thứ tự ưu tiên (từ trái sang phải)
+            // Áp dụng dịch theo thứ tự ưu tiên
             translationList.forEach(item => {
                 const regex = new RegExp(escapeRegExp(item.original), 'g');
                 translatedText = translatedText.replace(regex, ' ' + item.translation + ' ');
@@ -1063,18 +1023,19 @@
                 });
             }
 
-            // Làm sạch khoảng trắng thừa
+            // Làm sạch khoảng trắng NHƯNG TUYỆT ĐỐI KHÔNG ĐỤng \n
             translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); 
             
-            // Xử lý dấu câu đặc biệt
-            translatedText = translatedText.replace(/[ \t]*:[ \t]*"/g, ': "');
-            translatedText = translatedText.replace(/[ \t]*:[ \t]*'/g, ": '");
-            
-            // Xóa space trước dấu câu thông thường
+            // Xóa space trước dấu câu TRƯỚC KHI xử lý dấu đặc biệt
             translatedText = translatedText.replace(/[ \t]+([,.;!?)"'\]})>》」』】])/g, '$1');
             
             // Xóa space sau dấu mở ngoặc/nháy
             translatedText = translatedText.replace(/([("'\[{<《「『【])[ \t]+/g, '$1');
+            
+            // Xử lý dấu câu đặc biệt SAU KHI đã làm sạch
+            // Đảm bảo có đúng 1 space sau dấu hai chấm trước ngoặc kép
+            translatedText = translatedText.replace(/:"/g, ': "');
+            translatedText = translatedText.replace(/:'/g, ": '");
             
             // Xóa space thừa đầu cuối dòng
             translatedText = translatedText.replace(/[ \t]+$/gm, '');
@@ -1082,6 +1043,9 @@
             
             // Apply capitalization
             translatedText = capitalizeVietnamese(translatedText);
+
+            console.log('After translation line breaks:', (translatedText.match(/\n/g) || []).length);
+            console.log('Output text preview:', translatedText.substring(0, 200));
 
             return translatedText;
         }

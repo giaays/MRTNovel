@@ -925,28 +925,31 @@
             // Normalize punctuation first (trước khi dịch)
             translatedText = normalizeVietnamesePunctuation(translatedText);
 
-            // Apply names translation first (tối ưu với split-join)
+            // Apply names translation với boundary
             if (Object.keys(namesDict).length > 0) {
                 const sortedNames = Object.keys(namesDict).sort((a, b) => b.length - a.length);
                 sortedNames.forEach(chineseName => {
                     const vietnameseName = namesDict[chineseName];
-                    translatedText = translatedText.split(chineseName).join(vietnameseName);
+                    // Sử dụng regex để thêm boundary và space
+                    const regex = new RegExp(escapeRegExp(chineseName), 'g');
+                    translatedText = translatedText.replace(regex, ' ' + vietnameseName + ' ');
                 });
             }
 
-            // Apply phrase translation (tối ưu với split-join)
+            // Apply phrase translation với boundary
             if (Object.keys(vietPhraseDict).length > 0) {
                 const sortedPhrases = Object.keys(vietPhraseDict).sort((a, b) => b.length - a.length);
                 sortedPhrases.forEach(chinesePhrase => {
                     const vietnamesePhrase = vietPhraseDict[chinesePhrase];
-                    translatedText = translatedText.split(chinesePhrase).join(vietnamesePhrase);
+                    const regex = new RegExp(escapeRegExp(chinesePhrase), 'g');
+                    translatedText = translatedText.replace(regex, ' ' + vietnamesePhrase + ' ');
                 });
             }
 
             // Apply phonetic translation for remaining Chinese characters
             if (Object.keys(pinyinDict).length > 0) {
                 translatedText = translatedText.replace(/[\u4e00-\u9fff]+/g, function(match) {
-                    let result = '';
+                    let result = ' '; // Bắt đầu với space
                     for (let i = 0; i < match.length; i++) {
                         const char = match[i];
                         if (pinyinDict[char]) {
@@ -956,17 +959,23 @@
                             result += char;
                         }
                     }
+                    result += ' '; // Kết thúc với space
                     return result;
                 });
             }
 
-            // Chỉ làm sạch khoảng trắng thừa, KHÔNG động đến xuống dòng
-            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Nhiều space/tab liên tiếp thành 1 space
-            translatedText = translatedText.replace(/^[ \t]+|[ \t]+$/gm, ''); // Xóa space/tab đầu cuối dòng
-            translatedText = translatedText.replace(/[ \t]+([,.;:!?)"'\]})>》」』】])/g, '$1'); // Xóa space trước dấu câu đóng
-            translatedText = translatedText.replace(/([("'\[{<《「『【])[ \t]+/g, '$1'); // Xóa space sau dấu câu mở
+            // Làm sạch khoảng trắng thừa NHƯNG giữ nguyên các space cần thiết
+            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); // Nhiều space liên tiếp thành 1
+            translatedText = translatedText.replace(/^[ \t]+|[ \t]+$/gm, ''); // Xóa space đầu cuối dòng
             
-            // Apply capitalization cuối cùng
+            // Xóa space trước dấu câu và sau dấu mở
+            translatedText = translatedText.replace(/\s+([,.;:!?)"'\]})>》」』】])/g, '$1');
+            translatedText = translatedText.replace(/([("'\[{<《「『【])\s+/g, '$1');
+            
+            // Xóa space thừa quanh dấu xuống dòng
+            translatedText = translatedText.replace(/\s*\n\s*/g, '\n');
+            
+            // Apply capitalization
             translatedText = capitalizeVietnamese(translatedText);
 
             return translatedText;

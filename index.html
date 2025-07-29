@@ -699,19 +699,23 @@
                 console.log('After translation line breaks:', (content.match(/\n/g) || []).length);
             }
 
-            // Sử dụng <pre> để bảo toàn hoàn toàn format gốc
-            contentElement.innerHTML = `
-                <pre style="
-                    font-family: 'Arial', sans-serif; 
-                    font-size: 16px;
-                    line-height: 1.8; 
-                    white-space: pre-wrap; 
-                    margin: 0; 
-                    text-align: justify;
-                    word-wrap: break-word;
-                    overflow-wrap: break-word;
-                ">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
-            `;
+            // Chia thành các đoạn theo dòng trống thực sự
+            const paragraphs = content.split(/\n\n+/); // 2 hoặc nhiều \n = dòng trống
+            
+            contentElement.innerHTML = '';
+            
+            paragraphs.forEach((paragraph, index) => {
+                if (paragraph.trim()) {
+                    const p = document.createElement('p');
+                    // Thay \n đơn lẻ thành <br> trong đoạn
+                    p.innerHTML = paragraph.trim().replace(/\n/g, '<br>');
+                    p.style.marginBottom = index < paragraphs.length - 1 ? '1.5em' : '0';
+                    p.style.lineHeight = '1.8';
+                    p.style.textAlign = 'justify';
+                    p.style.textIndent = '2em';
+                    contentElement.appendChild(p);
+                }
+            });
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -895,13 +899,13 @@
                 return p1 + ' ' + p2.toUpperCase();
             });
             
-            // Viết hoa sau dấu nháy kép mở
-            text = text.replace(/(["""])\s*([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
+            // Viết hoa sau dấu nháy kép mở - CẢI THIỆN
+            text = text.replace(/(["""])([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
                 return p1 + p2.toUpperCase();
             });
             
-            // Viết hoa đầu dòng mới (sau \n)
-            text = text.replace(/(\n)\s*([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
+            // Viết hoa đầu dòng mới (sau \n) - CẢI THIỆN  
+            text = text.replace(/(\n)([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
                 return p1 + p2.toUpperCase();
             });
             
@@ -938,13 +942,15 @@
         }
 
         function applyTranslation(text) {
-            console.log('Before translation line breaks:', (text.match(/\n/g) || []).length);
-            console.log('Input text preview:', text.substring(0, 200));
+            console.log('=== TRANSLATION DEBUG ===');
+            console.log('Before translation:', text.substring(0, 100));
+            console.log('Line breaks before:', (text.match(/\n/g) || []).length);
             
             let translatedText = text;
 
             // Normalize punctuation first
             translatedText = normalizeVietnamesePunctuation(translatedText);
+            console.log('After punctuation normalize:', translatedText.substring(0, 100));
 
             // Tạo danh sách tất cả các từ cần dịch với độ ưu tiên
             let translationList = [];
@@ -1004,6 +1010,8 @@
                 const regex = new RegExp(escapeRegExp(item.original), 'g');
                 translatedText = translatedText.replace(regex, ' ' + item.translation + ' ');
             });
+            console.log('After word translation:', translatedText.substring(0, 100));
+            console.log('Line breaks after words:', (translatedText.match(/\n/g) || []).length);
 
             // Apply phonetic translation cho các ký tự còn lại
             if (Object.keys(pinyinDict).length > 0) {
@@ -1022,30 +1030,40 @@
                     return result;
                 });
             }
+            console.log('After phonetic translation:', translatedText.substring(0, 100));
+            console.log('Line breaks after phonetic:', (translatedText.match(/\n/g) || []).length);
 
-            // Làm sạch khoảng trắng NHƯNG TUYỆT ĐỐI KHÔNG ĐỤng \n
-            translatedText = translatedText.replace(/[ \t]{2,}/g, ' '); 
+            // Xử lý khoảng trắng và dấu câu CỰC KỲ CẨN THẬN
+            // Bước 1: Gộp nhiều space thành 1, KHÔNG đụng \n
+            translatedText = translatedText.replace(/[ \t]{2,}/g, ' ');
+            console.log('After space cleanup step 1:', translatedText.substring(0, 100));
             
-            // Xóa space trước dấu câu TRƯỚC KHI xử lý dấu đặc biệt
-            translatedText = translatedText.replace(/[ \t]+([,.;!?)"'\]})>》」』】])/g, '$1');
-            
-            // Xóa space sau dấu mở ngoặc/nháy
-            translatedText = translatedText.replace(/([("'\[{<《「『【])[ \t]+/g, '$1');
-            
-            // Xử lý dấu câu đặc biệt SAU KHI đã làm sạch
-            // Đảm bảo có đúng 1 space sau dấu hai chấm trước ngoặc kép
-            translatedText = translatedText.replace(/:"/g, ': "');
-            translatedText = translatedText.replace(/:'/g, ": '");
-            
-            // Xóa space thừa đầu cuối dòng
+            // Bước 2: Xóa space đầu cuối dòng, KHÔNG đụng \n
             translatedText = translatedText.replace(/[ \t]+$/gm, '');
             translatedText = translatedText.replace(/^[ \t]+/gm, '');
+            console.log('After space cleanup step 2:', translatedText.substring(0, 100));
+            
+            // Bước 3: Xử lý dấu câu
+            // Xóa space trước dấu câu NHƯNG KHÔNG bao gồm dấu nháy
+            translatedText = translatedText.replace(/[ \t]+([,.;!?)])}/g, '$1');
+            console.log('After punctuation cleanup:', translatedText.substring(0, 100));
+            
+            // Bước 4: Xử lý riêng dấu hai chấm + ngoặc kép
+            translatedText = translatedText.replace(/[ \t]*:[ \t]*"/g, ': "');
+            translatedText = translatedText.replace(/[ \t]*:[ \t]*'/g, ": '");
+            console.log('After colon quote fix:', translatedText.substring(0, 100));
+            
+            // Bước 5: Xóa space sau dấu mở ngoặc
+            translatedText = translatedText.replace(/([("'\[{])[ \t]+/g, '$1');
+            console.log('After opening bracket cleanup:', translatedText.substring(0, 100));
+            
+            console.log('Final line breaks:', (translatedText.match(/\n/g) || []).length);
             
             // Apply capitalization
             translatedText = capitalizeVietnamese(translatedText);
 
-            console.log('After translation line breaks:', (translatedText.match(/\n/g) || []).length);
-            console.log('Output text preview:', translatedText.substring(0, 200));
+            console.log('=== END DEBUG ===');
+            console.log('Final result preview:', translatedText.substring(0, 100));
 
             return translatedText;
         }

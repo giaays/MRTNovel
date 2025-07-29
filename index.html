@@ -451,7 +451,7 @@
                         <input type="file" id="pinyinFile" class="file-input" accept=".txt">
                         <div class="file-upload-status" id="pinyinFileStatus">✅ Đã tải file phiên âm</div>
                         
-                        <button class="dropdown-item" onclick="createSampleFiles()">📝 Tạo File Mẫu</button>
+                        <button class="dropdown-item" onclick="openNameEditor()">✏️ Sửa Tên Nhân Vật</button>
                     </div>
                 </div>
 
@@ -825,7 +825,16 @@
             toggleSwitch.classList.toggle('active', translationEnabled);
             console.log('New translation state:', translationEnabled); // Debug log
             
-            if (chapters.length > 0) {
+            // Hiển thị loading trong khi dịch
+            if (translationEnabled && chapters.length > 0) {
+                const content = document.getElementById('chapterContent');
+                content.innerHTML = '<div class="loading"><div class="spinner"></div>Đang dịch...</div>';
+                
+                // Sử dụng setTimeout để tránh block UI
+                setTimeout(() => {
+                    loadChapter(currentChapter);
+                }, 50);
+            } else if (chapters.length > 0) {
                 loadChapter(currentChapter);
             }
             saveSettings();
@@ -837,8 +846,8 @@
 
         function capitalizeVietnamese(text) {
             // Viết hoa đầu câu và sau dấu nháy
-            text = text.replace(/(^|\.|!|\?|"|"|")\s*([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
-                return p1 + (p1.includes('.') || p1.includes('!') || p1.includes('?') ? ' ' : '') + p2.toUpperCase();
+            text = text.replace(/(^|[.!?]\s*|"\s*)([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
+                return p1 + p2.toUpperCase();
             });
             
             return text;
@@ -871,28 +880,40 @@
         function applyTranslation(text) {
             let translatedText = text;
 
-            // Apply names translation first
-            Object.keys(namesDict).forEach(chineseName => {
+            // Apply names translation first (tối ưu bằng cách sắp xếp theo độ dài giảm dần)
+            const sortedNames = Object.keys(namesDict).sort((a, b) => b.length - a.length);
+            sortedNames.forEach(chineseName => {
                 const vietnameseName = namesDict[chineseName];
                 const regex = new RegExp(escapeRegExp(chineseName), 'g');
                 translatedText = translatedText.replace(regex, vietnameseName);
             });
 
-            // Apply phrase translation
-            Object.keys(vietPhraseDict).forEach(chinesePhrase => {
+            // Apply phrase translation (tối ưu bằng cách sắp xếp theo độ dài giảm dần)
+            const sortedPhrases = Object.keys(vietPhraseDict).sort((a, b) => b.length - a.length);
+            sortedPhrases.forEach(chinesePhrase => {
                 const vietnamesePhrase = vietPhraseDict[chinesePhrase];
                 const regex = new RegExp(escapeRegExp(chinesePhrase), 'g');
                 translatedText = translatedText.replace(regex, vietnamesePhrase);
             });
 
-            // Apply phonetic translation for remaining Chinese characters
+            // Apply phonetic translation for remaining Chinese characters (cải thiện xử lý)
             translatedText = translatedText.replace(/[\u4e00-\u9fff]+/g, function(match) {
                 let result = '';
-                for (let char of match) {
+                for (let i = 0; i < match.length; i++) {
+                    const char = match[i];
                     if (pinyinDict[char]) {
+                        // Thêm khoảng trắng trước mỗi từ phiên âm (trừ từ đầu tiên)
+                        if (result && !result.endsWith(' ')) {
+                            result += ' ';
+                        }
                         result += pinyinDict[char];
                     } else {
                         result += char;
+                    }
+                    
+                    // Thêm khoảng trắng sau mỗi ký tự được dịch (trừ ký tự cuối)
+                    if (i < match.length - 1 && pinyinDict[char]) {
+                        result += ' ';
                     }
                 }
                 return result;
@@ -901,6 +922,9 @@
             // Normalize punctuation and capitalize
             translatedText = normalizeVietnamesePunctuation(translatedText);
             translatedText = capitalizeVietnamese(translatedText);
+            
+            // Làm sạch khoảng trắng thừa
+            translatedText = translatedText.replace(/\s+/g, ' ').trim();
 
             return translatedText;
         }

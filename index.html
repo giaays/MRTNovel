@@ -698,18 +698,19 @@
                 content = applyTranslation(content);
             }
 
-            // Sử dụng pre với styling để giữ nguyên format và có thể thụt đầu dòng
+            // Giữ nguyên hoàn toàn xuống dòng như bản gốc
             contentElement.innerHTML = `
-                <div style="
+                <pre style="
                     font-family: 'Times New Roman', serif; 
                     font-size: 16px;
-                    line-height: 1.9; 
+                    line-height: 1.8; 
                     text-align: justify;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
-                    white-space: pre-line;
-                    text-indent: 0;
-                ">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                    white-space: pre-wrap;
+                    margin: 0;
+                    padding: 0;
+                ">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
             `;
 
             // Update TOC active state
@@ -933,22 +934,31 @@
             text = text.replace(/『/g, '"');
             text = text.replace(/』/g, '"');
             
-            // Sửa dấu câu đúng chính tả tiếng Việt
+            // Sửa dấu câu theo chuẩn tiếng Việt:
+            // Dấu câu sát ký tự trước, sau đó cách ra (trừ ngoặc)
+            
             // Xóa khoảng trắng trước dấu câu
             text = text.replace(/\s+([,.;:!?])/g, '$1');
             
-            // Thêm khoảng trắng sau dấu câu (trừ cuối câu)
+            // Thêm khoảng trắng sau dấu câu
             text = text.replace(/([,.;:])\s*/g, '$1 ');
             text = text.replace(/([.!?])\s*/g, '$1 ');
             
-            // Sửa dấu nháy kép và ngoặc đơn
+            // Xử lý ngoặc đơn và vuông - không cách trước mở, cách sau đóng
+            text = text.replace(/\s*\(\s*/g, ' (');
+            text = text.replace(/\s*\)\s*/g, ') ');
+            text = text.replace(/\s*\[\s*/g, ' [');
+            text = text.replace(/\s*\]\s*/g, '] ');
+            
+            // Xử lý ngoặc kép - sát ký tự
             text = text.replace(/\s*"\s*/g, '"');
             text = text.replace(/\s*'\s*/g, "'");
-            text = text.replace(/\s*\(\s*/g, '(');
-            text = text.replace(/\s*\)\s*/g, ') ');
             
             // Xử lý dấu hai chấm + ngoặc kép
             text = text.replace(/:\s*"/g, ': "');
+            
+            // Làm sạch khoảng trắng thừa
+            text = text.replace(/\s{2,}/g, ' ');
             
             return text;
         }

@@ -671,7 +671,8 @@
                 content = applyTranslation(content);
             }
 
-            document.getElementById('chapterContent').textContent = content;
+            // Giữ nguyên format xuống dòng từ văn bản gốc
+            document.getElementById('chapterContent').innerHTML = content.replace(/\n/g, '<br>');
 
             // Update TOC active state
             document.querySelectorAll('.toc-item').forEach((item, i) => {
@@ -845,8 +846,18 @@
         }
 
         function capitalizeVietnamese(text) {
-            // Viết hoa đầu câu và sau dấu nháy
-            text = text.replace(/(^|[.!?]\s*|"\s*)([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
+            // Viết hoa đầu văn bản
+            text = text.replace(/^([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/i, function(match) {
+                return match.toUpperCase();
+            });
+            
+            // Viết hoa sau dấu câu kết thúc câu (.!?) và có khoảng trắng
+            text = text.replace(/([.!?])\s+([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
+                return p1 + ' ' + p2.toUpperCase();
+            });
+            
+            // Viết hoa sau dấu nháy kép mở và có khoảng trắng
+            text = text.replace(/(["""])\s*([a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ])/gi, function(match, p1, p2) {
                 return p1 + p2.toUpperCase();
             });
             
@@ -896,35 +907,33 @@
                 translatedText = translatedText.replace(regex, vietnamesePhrase);
             });
 
-            // Apply phonetic translation for remaining Chinese characters (cải thiện xử lý)
+            // Apply phonetic translation for remaining Chinese characters
             translatedText = translatedText.replace(/[\u4e00-\u9fff]+/g, function(match) {
                 let result = '';
                 for (let i = 0; i < match.length; i++) {
                     const char = match[i];
                     if (pinyinDict[char]) {
-                        // Thêm khoảng trắng trước mỗi từ phiên âm (trừ từ đầu tiên)
-                        if (result && !result.endsWith(' ')) {
+                        // Thêm khoảng trắng trước mỗi từ phiên âm (trừ từ đầu tiên trong cụm)
+                        if (i > 0) {
                             result += ' ';
                         }
                         result += pinyinDict[char];
                     } else {
                         result += char;
                     }
-                    
-                    // Thêm khoảng trắng sau mỗi ký tự được dịch (trừ ký tự cuối)
-                    if (i < match.length - 1 && pinyinDict[char]) {
-                        result += ' ';
-                    }
                 }
                 return result;
             });
 
-            // Normalize punctuation and capitalize
+            // Normalize punctuation 
             translatedText = normalizeVietnamesePunctuation(translatedText);
-            translatedText = capitalizeVietnamese(translatedText);
             
-            // Làm sạch khoảng trắng thừa
-            translatedText = translatedText.replace(/\s+/g, ' ').trim();
+            // Làm sạch khoảng trắng thừa nhưng giữ nguyên xuống dòng
+            translatedText = translatedText.replace(/[ \t]+/g, ' '); // Chỉ thay thế space và tab
+            translatedText = translatedText.replace(/^\s+|\s+$/gm, ''); // Xóa space đầu/cuối mỗi dòng
+            
+            // Apply capitalization
+            translatedText = capitalizeVietnamese(translatedText);
 
             return translatedText;
         }
